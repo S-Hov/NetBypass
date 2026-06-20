@@ -1,0 +1,12 @@
+# id: linear
+# name: Linear
+# category: Разработка
+# default: false
+
+45.155.204.190 linear.app
+45.155.204.190 client-api.linear.app
+45.155.204.190 static.linear.app
+45.155.204.190 constellation.linear.app
+45.155.204.190 uploads.linear.app
+45.155.204.190 public.linear.app
+45.155.204.190 s.linear.app

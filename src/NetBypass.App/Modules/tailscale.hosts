@@ -1,0 +1,6 @@
+# id: tailscale
+# name: Tailscale
+# category: Сеть
+# default: false
+
+103.27.157.38 controlplane.tailscale.com

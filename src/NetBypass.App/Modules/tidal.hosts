@@ -1,0 +1,16 @@
+# id: tidal
+# name: Tidal
+# category: Музыка
+# default: false
+
+103.27.157.38 api.tidal.com
+103.27.157.38 listen.tidal.com
+103.27.157.38 login.tidal.com
+103.27.157.38 auth.tidal.com
+103.27.157.38 link.tidal.com
+103.27.157.38 dd.tidal.com
+103.27.157.38 resources.tidal.com
+103.27.157.38 images.tidal.com
+45.155.204.190 geolocation.onetrust.com
+45.155.204.190 api.squareup.com
+45.155.204.190 api-global.squareup.com

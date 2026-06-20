@@ -1,0 +1,11 @@
+# id: microsoft
+# name: Microsoft / Xbox
+# category: Платформы
+# default: false
+
+45.155.204.190 copilot.microsoft.com
+45.155.204.190 edgeservices.bing.com
+45.155.204.190 rewards.bing.com
+45.155.204.190 xsts.auth.xboxlive.com
+45.155.204.190 xgpuwebf2p.gssv-play-prod.xboxlive.com
+45.155.204.190 xgpuweb.gssv-play-prod.xboxlive.com

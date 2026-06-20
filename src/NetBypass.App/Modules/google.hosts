@@ -1,0 +1,24 @@
+# id: google
+# name: Google AI / Gemini
+# category: AI
+# default: false
+
+62.133.62.97 api.fitbit.com
+62.133.62.97 fitbit-pa.googleapis.com
+62.133.62.97 fitbitvestibuleshim-pa.googleapis.com
+62.133.62.97 fitbit.google.com
+62.133.62.97 gemini.google.com
+62.133.62.97 aistudio.google.com
+62.133.62.97 generativelanguage.googleapis.com
+62.133.62.97 aitestkitchen.withgoogle.com
+62.133.62.97 aisandbox-pa.googleapis.com
+62.133.62.97 webchannel-alkalimakersuite-pa.clients6.google.com
+62.133.62.97 alkalimakersuite-pa.clients6.google.com
+62.133.62.97 assistant-s3-pa.googleapis.com
+62.133.62.97 proactivebackend-pa.googleapis.com
+62.133.62.97 robinfrontend-pa.googleapis.com
+62.133.62.97 o.pki.goog
+62.133.62.97 labs.google
+62.133.62.97 notebooklm.google.com
+62.133.62.97 jules.google.com
+62.133.62.97 stitch.withgoogle.com

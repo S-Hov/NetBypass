@@ -1,0 +1,8 @@
+# id: github-copilot
+# name: GitHub Copilot
+# category: Разработка
+# default: false
+
+103.27.157.38 api.github.com
+103.27.157.38 api.individual.githubcopilot.com
+103.27.157.38 proxy.individual.githubcopilot.com

@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Security.Principal;
 using System.Windows;
+using System.Windows.Threading;
 
 namespace NetBypass.App;
 
@@ -10,6 +11,7 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        DispatcherUnhandledException += OnDispatcherUnhandledException;
 
         if (!IsAdministrator())
         {
@@ -19,6 +21,18 @@ public partial class App : Application
         }
 
         new MainWindow().Show();
+    }
+
+    private static void OnDispatcherUnhandledException(
+        object sender,
+        DispatcherUnhandledExceptionEventArgs e)
+    {
+        MessageBox.Show(
+            $"NetBypass столкнулся с ошибкой:\n\n{e.Exception.Message}",
+            "Ошибка NetBypass",
+            MessageBoxButton.OK,
+            MessageBoxImage.Error);
+        e.Handled = true;
     }
 
     private static bool IsAdministrator()

@@ -485,7 +485,7 @@
                                            HorizontalAlignment="Right"
                                            Foreground="#AFA0FF"/>
                             </Grid>
-                            <ProgressBar Value="{Binding DiagnosticProgressPercent}"
+                            <ProgressBar Value="{Binding DiagnosticProgressPercent, Mode=OneWay}"
                                          Maximum="100"
                                          Style="{StaticResource DiagnosticProgressBar}"/>
                         </StackPanel>

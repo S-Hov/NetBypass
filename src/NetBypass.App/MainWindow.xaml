@@ -182,6 +182,24 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <Style x:Key="QuietListViewItem" TargetType="ListViewItem">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListViewItem">
+                        <Border Background="Transparent"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <Grid>
@@ -303,88 +321,92 @@
                                Foreground="#9095A6"/>
                 </StackPanel>
 
-                <StackPanel Grid.Row="1"
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            MaxWidth="570">
-                    <Button Command="{Binding PowerCommand}"
-                            Style="{StaticResource PowerButton}"
-                            ToolTip="{Binding PowerButtonLabel}">
-                        <StackPanel HorizontalAlignment="Center">
-                            <TextBlock Text="⏻"
-                                       HorizontalAlignment="Center"
-                                       FontSize="58"
-                                       Foreground="{Binding StateAccent}"/>
-                            <TextBlock Text="{Binding PowerButtonLabel}"
-                                       Margin="0,8,0,0"
-                                       HorizontalAlignment="Center"
-                                       FontSize="17"
-                                       FontWeight="SemiBold"/>
-                        </StackPanel>
-                    </Button>
+                <ScrollViewer Grid.Row="1"
+                              VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled"
+                              Padding="0,16,0,16">
+                    <StackPanel HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                MaxWidth="570">
+                        <Button Command="{Binding PowerCommand}"
+                                Style="{StaticResource PowerButton}"
+                                ToolTip="{Binding PowerButtonLabel}">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock Text="⏻"
+                                           HorizontalAlignment="Center"
+                                           FontSize="58"
+                                           Foreground="{Binding StateAccent}"/>
+                                <TextBlock Text="{Binding PowerButtonLabel}"
+                                           Margin="0,8,0,0"
+                                           HorizontalAlignment="Center"
+                                           FontSize="17"
+                                           FontWeight="SemiBold"/>
+                            </StackPanel>
+                        </Button>
 
-                    <TextBlock Text="{Binding StateTitle}"
-                               Margin="0,24,0,0"
-                               HorizontalAlignment="Center"
-                               FontSize="23"
-                               FontWeight="SemiBold"
-                               Foreground="{Binding StateAccent}"/>
-                    <TextBlock Text="{Binding StateDescription}"
-                               Margin="0,9,0,0"
-                               HorizontalAlignment="Center"
-                               TextAlignment="Center"
-                               TextWrapping="Wrap"
-                               FontSize="14"
-                               Foreground="#A5A9B8"/>
-
-                    <Border Margin="0,24,0,0"
-                            Padding="16,12"
-                            CornerRadius="10"
-                            Background="#181A22">
-                        <TextBlock Text="NetBypass продолжает работать после закрытия программы и перезагрузки компьютера."
+                        <TextBlock Text="{Binding StateTitle}"
+                                   Margin="0,20,0,0"
+                                   HorizontalAlignment="Center"
+                                   FontSize="23"
+                                   FontWeight="SemiBold"
+                                   Foreground="{Binding StateAccent}"/>
+                        <TextBlock Text="{Binding StateDescription}"
+                                   Margin="0,9,0,0"
+                                   HorizontalAlignment="Center"
                                    TextAlignment="Center"
                                    TextWrapping="Wrap"
-                                   Foreground="#B6BAC8"/>
-                    </Border>
+                                   FontSize="14"
+                                   Foreground="#A5A9B8"/>
 
-                    <TextBlock Text="{Binding OperationMessage}"
-                               Visibility="{Binding HasOperationMessage, Converter={StaticResource BooleanToVisibility}}"
-                               Margin="0,14,0,0"
-                               HorizontalAlignment="Center"
-                               TextAlignment="Center"
-                               Foreground="#8F94A5"/>
+                        <Border Margin="0,20,0,0"
+                                Padding="16,12"
+                                CornerRadius="10"
+                                Background="#181A22">
+                            <TextBlock Text="NetBypass продолжает работать после закрытия программы и перезагрузки компьютера."
+                                       TextAlignment="Center"
+                                       TextWrapping="Wrap"
+                                       Foreground="#B6BAC8"/>
+                        </Border>
 
-                    <Border Visibility="{Binding HasCleanupItems, Converter={StaticResource BooleanToVisibility}}"
-                            Margin="0,14,0,0"
-                            Padding="16,12"
-                            CornerRadius="10"
-                            Background="#181A22"
-                            BorderBrush="#252936"
-                            BorderThickness="1">
-                        <StackPanel>
-                            <TextBlock Text="{Binding CleanupTitle}"
-                                       FontWeight="SemiBold"
-                                       Foreground="#E5E7F0"/>
-                            <ItemsControl ItemsSource="{Binding CleanupItems}"
-                                          Margin="0,8,0,0">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding}"
-                                                   Margin="0,3,0,0"
-                                                   Foreground="#A7ABBA"
-                                                   TextWrapping="Wrap"/>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </StackPanel>
-                    </Border>
+                        <TextBlock Text="{Binding OperationMessage}"
+                                   Visibility="{Binding HasOperationMessage, Converter={StaticResource BooleanToVisibility}}"
+                                   Margin="0,12,0,0"
+                                   HorizontalAlignment="Center"
+                                   TextAlignment="Center"
+                                   Foreground="#8F94A5"/>
 
-                    <Button Content="Посмотреть доступные и недоступные сервисы"
-                            Command="{Binding ShowDiagnosticsCommand}"
-                            Visibility="{Binding HasPartialAvailability, Converter={StaticResource BooleanToVisibility}}"
-                            Margin="0,16,0,0"
-                            Padding="18,11"/>
-                </StackPanel>
+                        <Border Visibility="{Binding HasCleanupItems, Converter={StaticResource BooleanToVisibility}}"
+                                Margin="0,12,0,0"
+                                Padding="16,12"
+                                CornerRadius="10"
+                                Background="#181A22"
+                                BorderBrush="#252936"
+                                BorderThickness="1">
+                            <StackPanel>
+                                <TextBlock Text="{Binding CleanupTitle}"
+                                           FontWeight="SemiBold"
+                                           Foreground="#E5E7F0"/>
+                                <ItemsControl ItemsSource="{Binding CleanupItems}"
+                                              Margin="0,8,0,0">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding}"
+                                                       Margin="0,3,0,0"
+                                                       Foreground="#A7ABBA"
+                                                       TextWrapping="Wrap"/>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+
+                        <Button Content="Посмотреть доступные и недоступные сервисы"
+                                Command="{Binding ShowDiagnosticsCommand}"
+                                Visibility="{Binding HasPartialAvailability, Converter={StaticResource BooleanToVisibility}}"
+                                Margin="0,16,0,0"
+                                Padding="18,11"/>
+                    </StackPanel>
+                </ScrollViewer>
 
                 <Grid Grid.Row="2" Margin="42,0,42,30">
                     <Grid.ColumnDefinitions>
@@ -507,7 +529,10 @@
                     <Button Grid.Column="1"
                             Content="Сохранить и применить"
                             Command="{Binding ApplyCommand}"
-                            Style="{StaticResource PrimaryButton}"/>
+                            Style="{StaticResource PrimaryButton}"
+                            MinWidth="210"
+                            Height="44"
+                            Padding="18,0"/>
                 </Grid>
             </Grid>
 
@@ -519,31 +544,32 @@
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
+                <StackPanel>
                     <StackPanel>
                         <TextBlock Text="Диагностика"
                                    FontSize="28"
                                    FontWeight="Bold"/>
                         <TextBlock Text="Проверка настоящего DNS, целевого TCP и TLS-сертификата"
                                    Margin="0,6,0,0"
+                                   TextWrapping="Wrap"
                                    Foreground="#9095A6"/>
                     </StackPanel>
-                    <StackPanel Grid.Column="1"
-                                Orientation="Horizontal"
-                                VerticalAlignment="Center">
+                    <WrapPanel Margin="0,18,0,0"
+                               HorizontalAlignment="Right"
+                               VerticalAlignment="Center">
                         <Button Command="{Binding ApplyReachableCommand}"
                                 Visibility="{Binding HasUnavailableServices, Converter={StaticResource BooleanToVisibility}}"
                                 Content="Исключить недоступные и применить"
-                                Padding="16,12"/>
+                                MinWidth="250"
+                                Height="44"
+                                Padding="16,0"
+                                Margin="0,0,10,8"/>
                         <Button Command="{Binding DiagnoseCommand}"
                                 Style="{StaticResource PrimaryButton}"
                                 MinWidth="220"
                                 Height="44"
-                                Padding="18,0">
+                                Padding="18,0"
+                                Margin="0,0,0,8">
                             <StackPanel Orientation="Horizontal"
                                         HorizontalAlignment="Center">
                                 <Grid Width="18"
@@ -578,8 +604,8 @@
                                            FontWeight="SemiBold"/>
                             </StackPanel>
                         </Button>
-                    </StackPanel>
-                </Grid>
+                    </WrapPanel>
+                </StackPanel>
 
                 <Border Grid.Row="1"
                         Margin="0,20,0,12"
@@ -622,12 +648,7 @@
                               Foreground="#F5F5F7"
                               ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                         <ListView.ItemContainerStyle>
-                            <Style TargetType="ListViewItem">
-                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                <Setter Property="Background" Value="Transparent"/>
-                                <Setter Property="BorderThickness" Value="0"/>
-                                <Setter Property="Focusable" Value="False"/>
-                            </Style>
+                            <StaticResource ResourceKey="QuietListViewItem"/>
                         </ListView.ItemContainerStyle>
                         <ListView.ItemTemplate>
                             <DataTemplate>
@@ -637,12 +658,12 @@
                                         Background="#20232D">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="1.2*"/>
-                                            <ColumnDefinition Width="1.2*"/>
-                                            <ColumnDefinition Width="1.8*"/>
+                                            <ColumnDefinition Width="1.1*"/>
+                                            <ColumnDefinition Width="1.45*"/>
+                                            <ColumnDefinition Width="1.75*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <StackPanel>
+                                        <StackPanel Margin="0,0,16,0">
                                             <TextBlock Text="{Binding ServiceName}"
                                                        FontWeight="SemiBold"
                                                        FontSize="15"/>
@@ -651,24 +672,27 @@
                                                        Foreground="#777C8D"
                                                        FontSize="11"/>
                                         </StackPanel>
-                                        <StackPanel Grid.Column="1">
+                                        <StackPanel Grid.Column="1"
+                                                    Margin="0,0,16,0">
                                             <TextBlock Text="Целевой адрес"
                                                        Foreground="#777C8D"
                                                        FontSize="11"/>
                                             <TextBlock Text="{Binding TargetAddress}"
-                                                       Margin="0,4,0,0"/>
+                                                       Margin="0,4,0,0"
+                                                       TextWrapping="Wrap"/>
                                         </StackPanel>
-                                        <StackPanel Grid.Column="2">
+                                        <StackPanel Grid.Column="2"
+                                                    Margin="0,0,16,0">
                                             <TextBlock Text="Настоящий DoH-ответ"
                                                        Foreground="#777C8D"
                                                        FontSize="11"/>
                                             <TextBlock Text="{Binding DnsAddresses}"
-                                                       Margin="0,4,12,0"
-                                                       TextTrimming="CharacterEllipsis"/>
+                                                       Margin="0,4,0,0"
+                                                       TextWrapping="Wrap"/>
                                             <TextBlock Text="{Binding Summary}"
-                                                       Margin="0,5,12,0"
+                                                       Margin="0,5,0,0"
                                                        Foreground="#9095A6"
-                                                       TextTrimming="CharacterEllipsis"/>
+                                                       TextWrapping="Wrap"/>
                                         </StackPanel>
                                         <Border Grid.Column="3"
                                                 Padding="10,6"

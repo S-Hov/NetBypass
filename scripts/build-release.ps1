@@ -1,7 +1,7 @@
 param(
     [Parameter()]
     [ValidatePattern('^\d+\.\d+\.\d+([-.][0-9A-Za-z.-]+)?$')]
-    [string]$Version = '0.2.0'
+    [string]$Version = '1.0.0'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -17,7 +17,15 @@ if (-not (Test-Path -LiteralPath $innoCompiler)) {
     throw 'Inno Setup 6 was not found. Install it from https://jrsoftware.org/isinfo.php'
 }
 
+if (Get-Command git -ErrorAction SilentlyContinue) {
+    $gitStatus = git -C $root status --porcelain
+    if ($LASTEXITCODE -eq 0 -and $gitStatus) {
+        throw 'Working copy is not clean. Commit or stash changes before building a release.'
+    }
+}
+
 Remove-Item -LiteralPath $publishDirectory -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath $releaseDirectory -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Path $publishDirectory -Force | Out-Null
 New-Item -ItemType Directory -Path $releaseDirectory -Force | Out-Null
 

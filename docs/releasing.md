@@ -12,7 +12,7 @@
 Из корня проекта:
 
 ```powershell
-.\scripts\build-release.ps1 -Version 0.2.0
+.\scripts\build-release.ps1 -Version 1.0.0
 ```
 
 Скрипт:
@@ -25,8 +25,8 @@
 Готовые файлы появляются в `artifacts\release`:
 
 ```text
-NetBypass-v0.2.0-win-x64-portable.zip
-NetBypass-Setup-v0.2.0-win-x64.exe
+NetBypass-v1.0.0-win-x64-portable.zip
+NetBypass-Setup-v1.0.0-win-x64.exe
 SHA256SUMS.txt
 ```
 
@@ -54,13 +54,15 @@ git push origin main
 Создайте и отправьте тег:
 
 ```powershell
-git tag -a v0.2.0 -m "NetBypass v0.2.0"
-git push origin v0.2.0
+git tag -a v1.0.0 -m "NetBypass v1.0.0"
+git push origin v1.0.0
 ```
 
 На странице GitHub откройте **Releases → Draft a new release**, выберите тег и
 добавьте оба файла из `artifacts\release`.
 Также приложите `SHA256SUMS.txt`, чтобы скачанные сборки можно было проверить.
+В описание релиза добавьте краткое содержание из `CHANGELOG.md` и ссылку на
+`THIRD_PARTY_NOTICES.md`.
 
 Ранние версии следует отмечать как **pre-release**.
 

@@ -32,10 +32,14 @@ public sealed record ServiceDiagnosticResult(
     bool IsReachable,
     IReadOnlyList<string> ResolvedAddresses,
     IReadOnlyList<ProbeResult> Probes,
-    DateTimeOffset CheckedAt)
+    DateTimeOffset CheckedAt,
+    string? SelectedAddress = null,
+    string? SelectionReason = null,
+    bool UsedPreviousSelection = false,
+    IReadOnlyList<EndpointCandidateResult>? Candidates = null)
 {
     public string Summary => IsReachable
-        ? "TCP и TLS доступны"
+        ? SelectionReason ?? "TCP и TLS доступны"
         : Probes.LastOrDefault(probe => probe.Status == ProbeStatus.Failed)?.Message
           ?? "Проверка не пройдена";
 }
@@ -43,3 +47,12 @@ public sealed record ServiceDiagnosticResult(
 public sealed record DiagnosticSnapshot(
     DateTimeOffset CreatedAt,
     IReadOnlyList<ServiceDiagnosticResult> Services);
+
+public sealed record EndpointCandidateResult(
+    string Address,
+    string Host,
+    bool IsReachable,
+    bool IsPreviousSelection,
+    TimeSpan? TcpLatency,
+    TimeSpan? TlsLatency,
+    string Reason);

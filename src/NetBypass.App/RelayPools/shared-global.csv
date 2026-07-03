@@ -1,0 +1,6 @@
+id,address,port,protocol,priority,enabled,source,notes
+existing-primary,45.155.204.190,443,https,10,true,profiles,"Primary address used by most current JSON profiles; must still pass service-specific TLS checks."
+existing-eu-1,103.27.157.38,443,https,20,true,profiles,"Used by dyson, github-copilot, supercell, tailscale, tidal, and tiktok profiles."
+existing-google-supercell,62.133.62.97,443,https,30,true,profiles,"Used by google and supercell profiles."
+existing-supercell-patreon,185.246.223.127,443,https,40,true,profiles,"Used by patreon and supercell profiles."
+existing-supercell-alt,193.23.209.189,443,https,50,true,profiles,"Used by supercell profile as an additional candidate."

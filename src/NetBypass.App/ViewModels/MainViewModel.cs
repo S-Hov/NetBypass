@@ -24,6 +24,7 @@ public sealed class MainViewModel : ObservableObject
     private readonly HostsFileService _hostsService = new();
     private readonly SettingsService _settingsService = new();
     private readonly DiagnosticStore _diagnosticStore = new();
+    private readonly EndpointSelectionStore _endpointSelectionStore = new();
     private readonly NetworkDiagnosticService _diagnosticService = new(
         new CloudflareGoogleDohResolver(),
         new EndpointProbe());
@@ -457,7 +458,11 @@ public sealed class MainViewModel : ObservableObject
                 return;
             }
 
-            _hostsService.Apply(reachable.Select(item => item.Module));
+            var resultById = results.ToDictionary(
+                result => result.ServiceId,
+                StringComparer.OrdinalIgnoreCase);
+            _hostsService.Apply(reachable.Select(item =>
+                BuildEffectiveModule(item, resultById[item.Profile.Id])));
             DnsCacheService.Flush();
             _settingsService.Save(selected.Select(item => item.Module.Id));
             OperationMessage = failed.Length == 0
@@ -537,6 +542,7 @@ public sealed class MainViewModel : ObservableObject
         DiagnosticCompleted = 0;
         CurrentDiagnosticService = string.Empty;
         Diagnostics.Clear();
+        var previousSelections = _endpointSelectionStore.Load();
 
         using var semaphore = new SemaphoreSlim(6);
         var pending = selected.Select(async item =>
@@ -544,7 +550,10 @@ public sealed class MainViewModel : ObservableObject
             await semaphore.WaitAsync();
             try
             {
-                var result = await _diagnosticService.DiagnoseAsync(item.Profile);
+                previousSelections.TryGetValue(item.Profile.Id, out var previousSelection);
+                var result = await _diagnosticService.DiagnoseAsync(
+                    item.Profile,
+                    previousSelection);
                 return (Item: item, Result: result);
             }
             finally
@@ -574,6 +583,7 @@ public sealed class MainViewModel : ObservableObject
     {
         var snapshot = new DiagnosticSnapshot(DateTimeOffset.UtcNow, results);
         _diagnosticStore.Save(snapshot);
+        _endpointSelectionStore.SaveFromDiagnostics(results);
         _unavailableServiceIds = results
             .Where(result => !result.IsReachable)
             .Select(result => result.ServiceId)
@@ -640,12 +650,25 @@ public sealed class MainViewModel : ObservableObject
         if (!selectedIds.SetEquals(resultIds))
             return selected.Select(item => item.Module);
 
-        var reachableIds = snapshot.Services
+        var resultById = snapshot.Services
             .Where(result => result.IsReachable)
-            .Select(result => result.ServiceId)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        return selected.Where(item => reachableIds.Contains(item.Profile.Id))
-            .Select(item => item.Module);
+            .ToDictionary(result => result.ServiceId, StringComparer.OrdinalIgnoreCase);
+        return selected.Where(item => resultById.ContainsKey(item.Profile.Id))
+            .Select(item => BuildEffectiveModule(item, resultById[item.Profile.Id]));
+    }
+
+    private static ServiceModule BuildEffectiveModule(
+        ServiceItemViewModel item,
+        ServiceDiagnosticResult result)
+    {
+        var selectedAddress = result.SelectedAddress ?? result.TargetAddress;
+        if (string.IsNullOrWhiteSpace(selectedAddress))
+            return item.Module;
+
+        var entries = item.Module.Entries
+            .Select(entry => entry with { Address = selectedAddress })
+            .ToArray();
+        return item.Module with { Entries = entries };
     }
 
     private VerificationState DetermineVerificationState(

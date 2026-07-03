@@ -63,6 +63,106 @@ public sealed class NetworkDiagnosticServiceTests
     }
 
     [Fact]
+    public async Task DiagnoseAsync_WhenPreviousSelectionWorks_ReusesIt()
+    {
+        var profile = Profile with
+        {
+            HealthChecks =
+            [
+                new HealthCheckDefinition(
+                    "203.0.113.10",
+                    "demo.example",
+                    443,
+                    "https",
+                    Enumerable.Range(200, 300).ToHashSet()),
+                new HealthCheckDefinition(
+                    "203.0.113.20",
+                    "demo.example",
+                    443,
+                    "https",
+                    Enumerable.Range(200, 300).ToHashSet())
+            ]
+        };
+        var probe = new AddressProbe(new Dictionary<string, IReadOnlyList<ProbeResult>>
+        {
+            ["203.0.113.20"] =
+            [
+                Result(ProbeStage.Tcp, ProbeStatus.Success),
+                Result(ProbeStage.Tls, ProbeStatus.Success)
+            ]
+        });
+        var service = new NetworkDiagnosticService(
+            new FakeResolver([]),
+            probe);
+
+        var result = await service.DiagnoseAsync(
+            profile,
+            new EndpointSelection(
+                "demo",
+                "203.0.113.20",
+                "demo.example",
+                DateTimeOffset.UtcNow.AddHours(-1),
+                "previous"));
+
+        Assert.True(result.IsReachable);
+        Assert.True(result.UsedPreviousSelection);
+        Assert.Equal("203.0.113.20", result.SelectedAddress);
+        Assert.Equal(["203.0.113.20"], probe.CheckedAddresses);
+    }
+
+    [Fact]
+    public async Task DiagnoseAsync_WhenPreviousSelectionFails_SelectsReachableCandidate()
+    {
+        var profile = Profile with
+        {
+            HealthChecks =
+            [
+                new HealthCheckDefinition(
+                    "203.0.113.10",
+                    "demo.example",
+                    443,
+                    "https",
+                    Enumerable.Range(200, 300).ToHashSet()),
+                new HealthCheckDefinition(
+                    "203.0.113.20",
+                    "demo.example",
+                    443,
+                    "https",
+                    Enumerable.Range(200, 300).ToHashSet())
+            ]
+        };
+        var probe = new AddressProbe(new Dictionary<string, IReadOnlyList<ProbeResult>>
+        {
+            ["203.0.113.10"] =
+            [
+                Result(ProbeStage.Tcp, ProbeStatus.Failed)
+            ],
+            ["203.0.113.20"] =
+            [
+                Result(ProbeStage.Tcp, ProbeStatus.Success),
+                Result(ProbeStage.Tls, ProbeStatus.Success)
+            ]
+        });
+        var service = new NetworkDiagnosticService(
+            new FakeResolver([]),
+            probe);
+
+        var result = await service.DiagnoseAsync(
+            profile,
+            new EndpointSelection(
+                "demo",
+                "203.0.113.10",
+                "demo.example",
+                DateTimeOffset.UtcNow.AddHours(-1),
+                "previous"));
+
+        Assert.True(result.IsReachable);
+        Assert.False(result.UsedPreviousSelection);
+        Assert.Equal("203.0.113.20", result.SelectedAddress);
+        Assert.Contains("Прошлый адрес не прошёл проверку", result.SelectionReason);
+    }
+
+    [Fact]
     public void ServiceProfileLoader_CreatesVersionedProfile()
     {
         var profile = ServiceProfileLoader.CreateProfile(Profile.Module);
@@ -127,6 +227,53 @@ public sealed class NetworkDiagnosticServiceTests
         }
     }
 
+    [Fact]
+    public void EndpointSelectionStore_SavesReachableSelections()
+    {
+        var directory = Path.Combine(
+            Path.GetTempPath(),
+            $"NetBypass.Tests-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(directory);
+        var path = Path.Combine(directory, "endpoint-selections.json");
+
+        try
+        {
+            var store = new EndpointSelectionStore(path);
+            store.SaveFromDiagnostics(
+            [
+                new ServiceDiagnosticResult(
+                    "demo",
+                    "Demo",
+                    "203.0.113.20",
+                    true,
+                    [],
+                    [Result(ProbeStage.Tls, ProbeStatus.Success)],
+                    DateTimeOffset.UtcNow,
+                    "203.0.113.20",
+                    "selected",
+                    false,
+                    [new EndpointCandidateResult(
+                        "203.0.113.20",
+                        "demo.example",
+                        true,
+                        false,
+                        TimeSpan.FromMilliseconds(10),
+                        TimeSpan.FromMilliseconds(20),
+                        "TCP и TLS доступны")])
+            ]);
+
+            var selections = store.Load();
+
+            var selection = Assert.Single(selections).Value;
+            Assert.Equal("203.0.113.20", selection.Address);
+            Assert.Equal("demo.example", selection.Host);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
     private static ProbeResult Result(ProbeStage stage, ProbeStatus status) =>
         new(
             stage,
@@ -152,5 +299,25 @@ public sealed class NetworkDiagnosticServiceTests
             IPAddress targetAddress,
             CancellationToken cancellationToken) =>
             Task.FromResult(results);
+    }
+
+    private sealed class AddressProbe(
+        IReadOnlyDictionary<string, IReadOnlyList<ProbeResult>> resultsByAddress) : IEndpointProbe
+    {
+        private readonly List<string> _checkedAddresses = [];
+
+        public IReadOnlyList<string> CheckedAddresses => _checkedAddresses;
+
+        public Task<IReadOnlyList<ProbeResult>> ProbeAsync(
+            HealthCheckDefinition healthCheck,
+            IPAddress targetAddress,
+            CancellationToken cancellationToken)
+        {
+            var address = targetAddress.ToString();
+            _checkedAddresses.Add(address);
+            return Task.FromResult(resultsByAddress.TryGetValue(address, out var result)
+                ? result
+                : [Result(ProbeStage.Tcp, ProbeStatus.Failed)]);
+        }
     }
 }

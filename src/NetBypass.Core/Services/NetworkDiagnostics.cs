@@ -242,16 +242,18 @@ public sealed class NetworkDiagnosticService(
 {
     public async Task<ServiceDiagnosticResult> DiagnoseAsync(
         ServiceProfile profile,
+        EndpointSelection? previousSelection = null,
         CancellationToken cancellationToken = default)
     {
         var checkedAt = DateTimeOffset.UtcNow;
         var results = new List<ProbeResult>();
         var resolvedAddresses = new HashSet<IPAddress>();
 
-        foreach (var healthCheck in profile.HealthChecks)
+        foreach (var host in profile.HealthChecks.Select(check => check.Host)
+                     .Distinct(StringComparer.OrdinalIgnoreCase))
         {
             var resolved = await dohResolver.ResolveAsync(
-                healthCheck.Host,
+                host,
                 cancellationToken);
             resolvedAddresses.UnionWith(resolved);
             results.Add(new ProbeResult(
@@ -261,32 +263,198 @@ public sealed class NetworkDiagnosticService(
                 resolved.FirstOrDefault()?.ToString(),
                 resolved.Count > 0 ? null : "DohResolutionFailed",
                 resolved.Count > 0
-                    ? $"{healthCheck.Host}: DoH вернул адресов — {resolved.Count}"
-                    : $"{healthCheck.Host}: DoH не ответил",
+                    ? $"{host}: DoH вернул адресов — {resolved.Count}"
+                    : $"{host}: DoH не ответил",
                 checkedAt));
-
-            var target = IPAddress.Parse(healthCheck.TargetAddress);
-            results.AddRange(await endpointProbe.ProbeAsync(
-                healthCheck,
-                target,
-                cancellationToken));
         }
 
-        var expectedEndpointChecks = profile.HealthChecks.Count;
-        var reachable = results.Count(result =>
-                result.Stage == ProbeStage.Tcp && result.Status == ProbeStatus.Success)
-            == expectedEndpointChecks
-            && results.Count(result =>
-                result.Stage == ProbeStage.Tls && result.Status == ProbeStatus.Success)
-            == expectedEndpointChecks;
+        var candidates = BuildCandidates(profile);
+        var previousCandidate = previousSelection is null
+            ? null
+            : candidates.FirstOrDefault(candidate => string.Equals(
+                candidate.Address,
+                previousSelection.Address,
+                StringComparison.OrdinalIgnoreCase));
+
+        CandidateProbeResult? selected = null;
+        var checkedCandidates = new List<CandidateProbeResult>();
+
+        if (previousCandidate is not null)
+        {
+            var previousResult = await ProbeCandidateAsync(
+                previousCandidate,
+                isPreviousSelection: true,
+                cancellationToken);
+            checkedCandidates.Add(previousResult);
+            results.AddRange(previousResult.Probes);
+
+            if (previousResult.IsReachable)
+                selected = previousResult;
+        }
+
+        if (selected is null)
+        {
+            var remaining = candidates
+                .Where(candidate => previousCandidate is null
+                    || !string.Equals(
+                        candidate.Address,
+                        previousCandidate.Address,
+                        StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+
+            var probed = await Task.WhenAll(remaining.Select(candidate =>
+                ProbeCandidateAsync(candidate, isPreviousSelection: false, cancellationToken)));
+            checkedCandidates.AddRange(probed);
+            foreach (var candidate in probed)
+                results.AddRange(candidate.Probes);
+
+            selected = checkedCandidates
+                .Where(candidate => candidate.IsReachable)
+                .OrderBy(candidate => candidate.Score)
+                .ThenBy(candidate => candidate.Candidate.Priority)
+                .FirstOrDefault();
+        }
+
+        var reachable = selected is not null;
+        var candidateResults = checkedCandidates
+            .Select(candidate => candidate.ToResult())
+            .OrderByDescending(candidate => candidate.IsPreviousSelection)
+            .ThenByDescending(candidate => candidate.IsReachable)
+            .ThenBy(candidate => candidate.TcpLatency ?? TimeSpan.MaxValue)
+            .ToArray();
 
         return new ServiceDiagnosticResult(
             profile.Id,
             profile.Name,
-            string.Join(", ", profile.HealthChecks.Select(check => check.TargetAddress)),
+            selected?.Candidate.Address
+                ?? previousCandidate?.Address
+                ?? candidates.FirstOrDefault()?.Address
+                ?? string.Empty,
             reachable,
             resolvedAddresses.Select(address => address.ToString()).ToArray(),
             results,
-            checkedAt);
+            checkedAt,
+            selected?.Candidate.Address,
+            BuildSelectionReason(selected, previousSelection, checkedCandidates),
+            selected?.IsPreviousSelection ?? false,
+            candidateResults);
+    }
+
+    private async Task<CandidateProbeResult> ProbeCandidateAsync(
+        EndpointCandidate candidate,
+        bool isPreviousSelection,
+        CancellationToken cancellationToken)
+    {
+        var healthCheck = new HealthCheckDefinition(
+            candidate.Address,
+            candidate.Host,
+            candidate.Port,
+            candidate.Protocol,
+            candidate.AcceptedHttpStatuses);
+        var probes = await endpointProbe.ProbeAsync(
+            healthCheck,
+            IPAddress.Parse(candidate.Address),
+            cancellationToken);
+        return new CandidateProbeResult(candidate, isPreviousSelection, probes);
+    }
+
+    private static IReadOnlyList<EndpointCandidate> BuildCandidates(ServiceProfile profile)
+    {
+        var candidates = new Dictionary<string, EndpointCandidate>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var check in profile.HealthChecks)
+        {
+            candidates.TryAdd(
+                check.TargetAddress,
+                new EndpointCandidate(
+                    check.TargetAddress,
+                    check.Host,
+                    check.Port,
+                    check.Protocol,
+                    0,
+                    check.AcceptedHttpStatuses));
+        }
+
+        foreach (var relay in profile.RelayCandidates.OrderBy(candidate => candidate.Priority))
+        {
+            candidates.TryAdd(
+                relay.Address,
+                new EndpointCandidate(
+                    relay.Address,
+                    relay.Host,
+                    relay.Port,
+                    relay.Protocol,
+                    relay.Priority,
+                    Enumerable.Range(200, 300).ToHashSet()));
+        }
+
+        return candidates.Values.ToArray();
+    }
+
+    private static string BuildSelectionReason(
+        CandidateProbeResult? selected,
+        EndpointSelection? previousSelection,
+        IReadOnlyCollection<CandidateProbeResult> checkedCandidates)
+    {
+        if (selected is null)
+            return "Ни один адрес не прошёл TCP/TLS-проверку.";
+
+        if (selected.IsPreviousSelection)
+            return $"Использован прошлый рабочий адрес {selected.Candidate.Address}: повторная TCP/TLS-проверка пройдена.";
+
+        var failedPrevious = previousSelection is not null
+            && checkedCandidates.Any(candidate => candidate.IsPreviousSelection && !candidate.IsReachable);
+        var prefix = failedPrevious
+            ? "Прошлый адрес не прошёл проверку; "
+            : string.Empty;
+        var latency = selected.Score == TimeSpan.MaxValue
+            ? string.Empty
+            : $" Суммарная задержка TCP/TLS: {selected.Score.TotalMilliseconds:0} мс.";
+        return $"{prefix}выбран адрес {selected.Candidate.Address}, потому что TCP и TLS доступны.{latency}";
+    }
+
+    private sealed record EndpointCandidate(
+        string Address,
+        string Host,
+        int Port,
+        string Protocol,
+        int Priority,
+        IReadOnlySet<int> AcceptedHttpStatuses);
+
+    private sealed record CandidateProbeResult(
+        EndpointCandidate Candidate,
+        bool IsPreviousSelection,
+        IReadOnlyList<ProbeResult> Probes)
+    {
+        public bool IsReachable =>
+            Probes.Any(probe => probe.Stage == ProbeStage.Tcp && probe.Status == ProbeStatus.Success)
+            && Probes.Any(probe => probe.Stage == ProbeStage.Tls && probe.Status == ProbeStatus.Success);
+
+        public TimeSpan Score =>
+            IsReachable
+                ? Probes
+                    .Where(probe => probe.Stage is ProbeStage.Tcp or ProbeStage.Tls)
+                    .Select(probe => probe.Latency ?? TimeSpan.Zero)
+                    .Aggregate(TimeSpan.Zero, (total, latency) => total + latency)
+                : TimeSpan.MaxValue;
+
+        public EndpointCandidateResult ToResult()
+        {
+            var tcp = Probes.FirstOrDefault(probe => probe.Stage == ProbeStage.Tcp);
+            var tls = Probes.FirstOrDefault(probe => probe.Stage == ProbeStage.Tls);
+            var reason = IsReachable
+                ? "TCP и TLS доступны"
+                : Probes.LastOrDefault(probe => probe.Status == ProbeStatus.Failed)?.Message
+                  ?? "Проверка не пройдена";
+
+            return new EndpointCandidateResult(
+                Candidate.Address,
+                Candidate.Host,
+                IsReachable,
+                IsPreviousSelection,
+                tcp?.Latency,
+                tls?.Latency,
+                reason);
+        }
     }
 }

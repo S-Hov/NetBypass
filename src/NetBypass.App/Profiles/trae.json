@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "id": "trae",
+  "name": "Trae.ai",
+  "category": "Разработка",
+  "default": false,
+  "strategies": [
+    "adaptive-hosts"
+  ],
+  "hosts": [
+    {
+      "address": "45.155.204.190",
+      "hostname": "trae-api-sg.mchost.guru"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "api.trae.ai"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "api-sg-central.trae.ai"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "api16-normal-alisg.mchost.guru"
+    }
+  ],
+  "healthChecks": [
+    {
+      "targetAddress": "45.155.204.190",
+      "host": "trae-api-sg.mchost.guru",
+      "port": 443,
+      "protocol": "https"
+    }
+  ],
+  "relayCandidates": []
+}

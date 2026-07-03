@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "id": "windsurf",
+  "name": "Windsurf",
+  "category": "Разработка",
+  "default": false,
+  "strategies": [
+    "adaptive-hosts"
+  ],
+  "hosts": [
+    {
+      "address": "45.155.204.190",
+      "hostname": "windsurf.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "codeium.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "server.codeium.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "web-backend.codeium.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "unleash.codeium.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "inference.codeium.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "windsurf-stable.codeium.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "windsurf-telemetry.codeium.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "marketplace.windsurf.com"
+    }
+  ],
+  "healthChecks": [
+    {
+      "targetAddress": "45.155.204.190",
+      "host": "windsurf.com",
+      "port": 443,
+      "protocol": "https"
+    }
+  ],
+  "relayCandidates": []
+}

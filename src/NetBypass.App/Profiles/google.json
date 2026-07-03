@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "id": "google",
+  "name": "Google AI / Gemini",
+  "category": "AI",
+  "default": false,
+  "strategies": [
+    "adaptive-hosts"
+  ],
+  "hosts": [
+    {
+      "address": "62.133.62.97",
+      "hostname": "api.fitbit.com"
+    },
+    {
+      "address": "62.133.62.97",
+      "hostname": "fitbit-pa.googleapis.com"
+    },
+    {
+      "address": "62.133.62.97",
+      "hostname": "fitbitvestibuleshim-pa.googleapis.com"
+    },
+    {
+      "address": "62.133.62.97",
+      "hostname": "fitbit.google.com"
+    },
+    {
+      "address": "62.133.62.97",
+      "hostname": "gemini.google.com"
+    },
+    {
+      "address": "62.133.62.97",
+      "hostname": "aistudio.google.com"
+    },
+    {
+      "address": "62.133.62.97",
+      "hostname": "generativelanguage.googleapis.com"
+    },
+    {
+      "address": "62.133.62.97",
+      "hostname": "aitestkitchen.withgoogle.com"
+    },
+    {
+      "address": "62.133.62.97",
+      "hostname": "aisandbox-pa.googleapis.com"
+    },
+    {
+      "address": "62.133.62.97",
+      "hostname": "webchannel-alkalimakersuite-pa.clients6.google.com"
+    },
+    {
+      "address": "62.133.62.97",
+      "hostname": "alkalimakersuite-pa.clients6.google.com"
+    },
+    {
+      "address": "62.133.62.97",
+      "hostname": "assistant-s3-pa.googleapis.com"
+    },
+    {
+      "address": "62.133.62.97",
+      "hostname": "proactivebackend-pa.googleapis.com"
+    },
+    {
+      "address": "62.133.62.97",
+      "hostname": "robinfrontend-pa.googleapis.com"
+    },
+    {
+      "address": "62.133.62.97",
+      "hostname": "o.pki.goog"
+    },
+    {
+      "address": "62.133.62.97",
+      "hostname": "labs.google"
+    },
+    {
+      "address": "62.133.62.97",
+      "hostname": "notebooklm.google.com"
+    },
+    {
+      "address": "62.133.62.97",
+      "hostname": "jules.google.com"
+    },
+    {
+      "address": "62.133.62.97",
+      "hostname": "stitch.withgoogle.com"
+    }
+  ],
+  "healthChecks": [
+    {
+      "targetAddress": "62.133.62.97",
+      "host": "api.fitbit.com",
+      "port": 443,
+      "protocol": "https"
+    }
+  ],
+  "relayCandidates": []
+}

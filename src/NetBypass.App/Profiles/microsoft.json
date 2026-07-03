@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "id": "microsoft",
+  "name": "Microsoft / Xbox",
+  "category": "Платформы",
+  "default": false,
+  "strategies": [
+    "adaptive-hosts"
+  ],
+  "hosts": [
+    {
+      "address": "45.155.204.190",
+      "hostname": "copilot.microsoft.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "edgeservices.bing.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "rewards.bing.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "xsts.auth.xboxlive.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "xgpuwebf2p.gssv-play-prod.xboxlive.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "xgpuweb.gssv-play-prod.xboxlive.com"
+    }
+  ],
+  "healthChecks": [
+    {
+      "targetAddress": "45.155.204.190",
+      "host": "copilot.microsoft.com",
+      "port": 443,
+      "protocol": "https"
+    }
+  ],
+  "relayCandidates": []
+}

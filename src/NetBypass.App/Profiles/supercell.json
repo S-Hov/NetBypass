@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "id": "supercell",
+  "name": "Supercell",
+  "category": "Игры",
+  "default": false,
+  "strategies": [
+    "adaptive-hosts"
+  ],
+  "hosts": [
+    {
+      "address": "62.133.62.97",
+      "hostname": "game.clashroyaleapp.com"
+    },
+    {
+      "address": "193.23.209.189",
+      "hostname": "gamea.clashofclans.com"
+    },
+    {
+      "address": "185.246.223.127",
+      "hostname": "game.brawlstarsgame.com"
+    },
+    {
+      "address": "108.61.167.26",
+      "hostname": "game.squadbustersgame.com"
+    },
+    {
+      "address": "62.133.62.97",
+      "hostname": "game.mocogame.com"
+    },
+    {
+      "address": "103.27.157.38",
+      "hostname": "cdn.id.supercell.com"
+    },
+    {
+      "address": "103.27.157.38",
+      "hostname": "security.id.supercell.com"
+    },
+    {
+      "address": "103.27.157.38",
+      "hostname": "accounts.supercell.com"
+    },
+    {
+      "address": "103.27.157.38",
+      "hostname": "game-assets.clashroyaleapp.com"
+    },
+    {
+      "address": "103.27.157.38",
+      "hostname": "game-assets.clashofclans.com"
+    },
+    {
+      "address": "103.27.157.38",
+      "hostname": "clashofclans.inbox.supercell.com"
+    },
+    {
+      "address": "103.27.157.38",
+      "hostname": "game-assets.brawlstarsgame.com"
+    },
+    {
+      "address": "103.27.157.38",
+      "hostname": "store.supercell.com"
+    }
+  ],
+  "healthChecks": [
+    {
+      "targetAddress": "103.27.157.38",
+      "host": "cdn.id.supercell.com",
+      "port": 443,
+      "protocol": "https"
+    },
+    {
+      "targetAddress": "108.61.167.26",
+      "host": "game.squadbustersgame.com",
+      "port": 443,
+      "protocol": "https"
+    },
+    {
+      "targetAddress": "185.246.223.127",
+      "host": "game.brawlstarsgame.com",
+      "port": 443,
+      "protocol": "https"
+    },
+    {
+      "targetAddress": "193.23.209.189",
+      "host": "gamea.clashofclans.com",
+      "port": 443,
+      "protocol": "https"
+    },
+    {
+      "targetAddress": "62.133.62.97",
+      "host": "game.clashroyaleapp.com",
+      "port": 443,
+      "protocol": "https"
+    }
+  ],
+  "relayCandidates": []
+}

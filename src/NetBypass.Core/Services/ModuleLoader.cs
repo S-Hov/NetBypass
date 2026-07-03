@@ -49,14 +49,9 @@ public sealed partial class ModuleLoader
             if (parts.Length != 2)
                 throw new FormatException($"{path}: неверная строка '{rawLine}'. Ожидается IP и домен.");
 
-            if (!IPAddress.TryParse(parts[0], out var address))
-                throw new FormatException($"{path}: неверный IP-адрес '{parts[0]}'.");
-
-            var hostname = parts[1].TrimEnd('.').ToLowerInvariant();
-            ValidateEntry(path, address, hostname);
-
-            if (hostnames.Add(hostname))
-                entries.Add(new HostEntry(address.ToString(), hostname));
+            var entry = CreateHostEntry(path, parts[0], parts[1]);
+            if (hostnames.Add(entry.Hostname))
+                entries.Add(entry);
         }
 
         var id = Required(metadata, "id", path);
@@ -80,6 +75,16 @@ public sealed partial class ModuleLoader
             return;
 
         metadata[content[..separator].Trim()] = content[(separator + 1)..].Trim();
+    }
+
+    public static HostEntry CreateHostEntry(string path, string addressText, string hostnameText)
+    {
+        if (!IPAddress.TryParse(addressText, out var address))
+            throw new FormatException($"{path}: неверный IP-адрес '{addressText}'.");
+
+        var hostname = hostnameText.TrimEnd('.').ToLowerInvariant();
+        ValidateEntry(path, address, hostname);
+        return new HostEntry(address.ToString(), hostname);
     }
 
     private static void ValidateEntry(string path, IPAddress address, string hostname)

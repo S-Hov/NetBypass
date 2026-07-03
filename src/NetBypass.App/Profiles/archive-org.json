@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "archive-org",
+  "name": "Archive.org",
+  "category": "Сайты",
+  "default": false,
+  "strategies": [
+    "adaptive-hosts"
+  ],
+  "hosts": [
+    {
+      "address": "45.155.204.190",
+      "hostname": "web.archive.org"
+    }
+  ],
+  "healthChecks": [
+    {
+      "targetAddress": "45.155.204.190",
+      "host": "web.archive.org",
+      "port": 443,
+      "protocol": "https"
+    }
+  ],
+  "relayCandidates": []
+}

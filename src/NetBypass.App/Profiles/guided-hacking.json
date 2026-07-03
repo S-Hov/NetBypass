@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "guided-hacking",
+  "name": "Guided Hacking",
+  "category": "Безопасность",
+  "default": false,
+  "strategies": [
+    "adaptive-hosts"
+  ],
+  "hosts": [
+    {
+      "address": "45.155.204.190",
+      "hostname": "guidedhacking.com"
+    }
+  ],
+  "healthChecks": [
+    {
+      "targetAddress": "45.155.204.190",
+      "host": "guidedhacking.com",
+      "port": 443,
+      "protocol": "https"
+    }
+  ],
+  "relayCandidates": []
+}

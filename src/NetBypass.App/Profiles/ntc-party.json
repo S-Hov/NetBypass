@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "ntc-party",
+  "name": "NTC Party",
+  "category": "Сайты",
+  "default": false,
+  "strategies": [
+    "adaptive-hosts"
+  ],
+  "hosts": [
+    {
+      "address": "130.255.77.28",
+      "hostname": "ntc.party"
+    }
+  ],
+  "healthChecks": [
+    {
+      "targetAddress": "130.255.77.28",
+      "host": "ntc.party",
+      "port": 443,
+      "protocol": "https"
+    }
+  ],
+  "relayCandidates": []
+}

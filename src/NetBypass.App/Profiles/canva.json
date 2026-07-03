@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "id": "canva",
+  "name": "Canva",
+  "category": "Продуктивность",
+  "default": false,
+  "strategies": [
+    "adaptive-hosts"
+  ],
+  "hosts": [
+    {
+      "address": "45.155.204.190",
+      "hostname": "www.canva.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "content-management-files.canva.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "static.canva.com"
+    }
+  ],
+  "healthChecks": [
+    {
+      "targetAddress": "45.155.204.190",
+      "host": "www.canva.com",
+      "port": 443,
+      "protocol": "https"
+    }
+  ],
+  "relayCandidates": []
+}

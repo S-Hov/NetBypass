@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "id": "truth-social",
+  "name": "Truth Social",
+  "category": "Социальные сети",
+  "default": false,
+  "strategies": [
+    "adaptive-hosts"
+  ],
+  "hosts": [
+    {
+      "address": "45.155.204.190",
+      "hostname": "truthsocial.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "static-assets-1.truthsocial.com"
+    }
+  ],
+  "healthChecks": [
+    {
+      "targetAddress": "45.155.204.190",
+      "host": "truthsocial.com",
+      "port": 443,
+      "protocol": "https"
+    }
+  ],
+  "relayCandidates": []
+}

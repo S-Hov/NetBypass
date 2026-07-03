@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "id": "linear",
+  "name": "Linear",
+  "category": "Разработка",
+  "default": false,
+  "strategies": [
+    "adaptive-hosts"
+  ],
+  "hosts": [
+    {
+      "address": "45.155.204.190",
+      "hostname": "linear.app"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "client-api.linear.app"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "static.linear.app"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "constellation.linear.app"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "uploads.linear.app"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "public.linear.app"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "s.linear.app"
+    }
+  ],
+  "healthChecks": [
+    {
+      "targetAddress": "45.155.204.190",
+      "host": "linear.app",
+      "port": 443,
+      "protocol": "https"
+    }
+  ],
+  "relayCandidates": []
+}

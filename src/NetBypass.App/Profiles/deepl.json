@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 1,
+  "id": "deepl",
+  "name": "DeepL",
+  "category": "AI",
+  "default": false,
+  "strategies": [
+    "adaptive-hosts"
+  ],
+  "hosts": [
+    {
+      "address": "45.155.204.190",
+      "hostname": "deepl.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "www.deepl.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "www2.deepl.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "login-wall.deepl.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "w.deepl.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "s.deepl.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "dict.deepl.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "ita-free.www.deepl.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "write-free.www.deepl.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "experimentation.deepl.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "experimentation-grpc.deepl.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "ita-free.app.deepl.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "shield.deepl.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "ott.deepl.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "api-free.deepl.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "backend.deepl.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "clearance.deepl.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "errortracking.deepl.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "auth.deepl.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "oneshot-free.www.deepl.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "checkout.www.deepl.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "gtm.deepl.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "voice-proxy.www.deepl.com"
+    }
+  ],
+  "healthChecks": [
+    {
+      "targetAddress": "45.155.204.190",
+      "host": "deepl.com",
+      "port": 443,
+      "protocol": "https"
+    }
+  ],
+  "relayCandidates": []
+}

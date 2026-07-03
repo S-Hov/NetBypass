@@ -31,7 +31,8 @@ SHA256SUMS.txt
 ```
 
 Portable-архив нужно распаковать целиком: рядом с `NetBypass.exe` находятся
-нативные WPF-библиотеки и каталог `Modules`.
+нативные WPF-библиотеки, каталог `Profiles` с JSON-профилями и legacy-каталог
+`Modules`.
 
 ## Сборка через интерфейс Inno Setup
 

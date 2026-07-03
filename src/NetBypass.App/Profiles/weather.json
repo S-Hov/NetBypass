@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "id": "weather",
+  "name": "Weather.com",
+  "category": "Сервисы",
+  "default": false,
+  "strategies": [
+    "adaptive-hosts"
+  ],
+  "hosts": [
+    {
+      "address": "45.155.204.190",
+      "hostname": "weather.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "upsx.weather.com"
+    }
+  ],
+  "healthChecks": [
+    {
+      "targetAddress": "45.155.204.190",
+      "host": "weather.com",
+      "port": 443,
+      "protocol": "https"
+    }
+  ],
+  "relayCandidates": []
+}

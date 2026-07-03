@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "id": "claude",
+  "name": "Claude",
+  "category": "AI",
+  "default": false,
+  "strategies": [
+    "adaptive-hosts"
+  ],
+  "hosts": [
+    {
+      "address": "45.155.204.190",
+      "hostname": "claude.ai"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "console.anthropic.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "api.anthropic.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "platform.claude.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "a.claude.ai"
+    }
+  ],
+  "healthChecks": [
+    {
+      "targetAddress": "45.155.204.190",
+      "host": "claude.ai",
+      "port": 443,
+      "protocol": "https"
+    }
+  ],
+  "relayCandidates": []
+}

@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "tailscale",
+  "name": "Tailscale",
+  "category": "Сеть",
+  "default": false,
+  "strategies": [
+    "adaptive-hosts"
+  ],
+  "hosts": [
+    {
+      "address": "103.27.157.38",
+      "hostname": "controlplane.tailscale.com"
+    }
+  ],
+  "healthChecks": [
+    {
+      "targetAddress": "103.27.157.38",
+      "host": "controlplane.tailscale.com",
+      "port": 443,
+      "protocol": "https"
+    }
+  ],
+  "relayCandidates": []
+}

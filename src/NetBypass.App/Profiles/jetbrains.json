@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "id": "jetbrains",
+  "name": "JetBrains",
+  "category": "Разработка",
+  "default": false,
+  "strategies": [
+    "adaptive-hosts"
+  ],
+  "hosts": [
+    {
+      "address": "45.155.204.190",
+      "hostname": "datalore.jetbrains.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "plugins.jetbrains.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "download.jetbrains.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "api.jetbrains.ai"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "account.jetbrains.com"
+    }
+  ],
+  "healthChecks": [
+    {
+      "targetAddress": "45.155.204.190",
+      "host": "datalore.jetbrains.com",
+      "port": 443,
+      "protocol": "https"
+    }
+  ],
+  "relayCandidates": []
+}

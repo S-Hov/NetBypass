@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "rutor",
+  "name": "Rutor",
+  "category": "Сайты",
+  "default": false,
+  "strategies": [
+    "adaptive-hosts"
+  ],
+  "hosts": [
+    {
+      "address": "172.64.33.155",
+      "hostname": "d.rutor.info"
+    }
+  ],
+  "healthChecks": [
+    {
+      "targetAddress": "172.64.33.155",
+      "host": "d.rutor.info",
+      "port": 443,
+      "protocol": "https"
+    }
+  ],
+  "relayCandidates": []
+}

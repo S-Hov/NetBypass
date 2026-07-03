@@ -4,7 +4,8 @@ public sealed record ServiceProfile(
     int SchemaVersion,
     ServiceModule Module,
     IReadOnlyList<string> Strategies,
-    IReadOnlyList<HealthCheckDefinition> HealthChecks)
+    IReadOnlyList<HealthCheckDefinition> HealthChecks,
+    IReadOnlyList<RelayCandidate> RelayCandidates)
 {
     public string Id => Module.Id;
     public string Name => Module.Name;
@@ -17,3 +18,10 @@ public sealed record HealthCheckDefinition(
     int Port,
     string Protocol,
     IReadOnlySet<int> AcceptedHttpStatuses);
+
+public sealed record RelayCandidate(
+    string Address,
+    string Host,
+    int Port,
+    string Protocol,
+    int Priority);

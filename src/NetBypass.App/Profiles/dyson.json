@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "id": "dyson",
+  "name": "Dyson",
+  "category": "Производители",
+  "default": false,
+  "strategies": [
+    "adaptive-hosts"
+  ],
+  "hosts": [
+    {
+      "address": "45.155.204.190",
+      "hostname": "dyson.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "www.dyson.com"
+    },
+    {
+      "address": "103.27.157.38",
+      "hostname": "www.dyson.fr"
+    }
+  ],
+  "healthChecks": [
+    {
+      "targetAddress": "103.27.157.38",
+      "host": "www.dyson.fr",
+      "port": 443,
+      "protocol": "https"
+    },
+    {
+      "targetAddress": "45.155.204.190",
+      "host": "dyson.com",
+      "port": 443,
+      "protocol": "https"
+    }
+  ],
+  "relayCandidates": []
+}

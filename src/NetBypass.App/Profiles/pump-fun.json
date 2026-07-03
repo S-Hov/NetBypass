@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "id": "pump-fun",
+  "name": "Pump.fun",
+  "category": "Финансы",
+  "default": false,
+  "strategies": [
+    "adaptive-hosts"
+  ],
+  "hosts": [
+    {
+      "address": "45.155.204.190",
+      "hostname": "pump.fun"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "frontend-api-v3.pump.fun"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "images.pump.fun"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "swap-api.pump.fun"
+    }
+  ],
+  "healthChecks": [
+    {
+      "targetAddress": "45.155.204.190",
+      "host": "pump.fun",
+      "port": 443,
+      "protocol": "https"
+    }
+  ],
+  "relayCandidates": []
+}

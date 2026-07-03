@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "openbittorrent",
+  "name": "OpenBitTorrent Tracker",
+  "category": "Сайты",
+  "default": false,
+  "strategies": [
+    "adaptive-hosts"
+  ],
+  "hosts": [
+    {
+      "address": "52.223.13.41",
+      "hostname": "tracker.openbittorrent.com"
+    }
+  ],
+  "healthChecks": [
+    {
+      "targetAddress": "52.223.13.41",
+      "host": "tracker.openbittorrent.com",
+      "port": 443,
+      "protocol": "https"
+    }
+  ],
+  "relayCandidates": []
+}

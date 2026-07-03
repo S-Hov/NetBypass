@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "tiktok",
+  "name": "TikTok",
+  "category": "Социальные сети",
+  "default": false,
+  "strategies": [
+    "adaptive-hosts"
+  ],
+  "hosts": [
+    {
+      "address": "103.27.157.38",
+      "hostname": "www.tiktok.com"
+    }
+  ],
+  "healthChecks": [
+    {
+      "targetAddress": "103.27.157.38",
+      "host": "www.tiktok.com",
+      "port": 443,
+      "protocol": "https"
+    }
+  ],
+  "relayCandidates": []
+}

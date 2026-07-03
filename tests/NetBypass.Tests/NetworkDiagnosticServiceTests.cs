@@ -22,7 +22,8 @@ public sealed class NetworkDiagnosticServiceTests
             "demo.example",
             443,
             "https",
-            Enumerable.Range(200, 300).ToHashSet())]);
+            Enumerable.Range(200, 300).ToHashSet())],
+        []);
 
     [Fact]
     public async Task DiagnoseAsync_WhenTcpAndTlsSucceed_ReturnsReachable()
@@ -69,6 +70,7 @@ public sealed class NetworkDiagnosticServiceTests
         Assert.Equal(1, profile.SchemaVersion);
         Assert.Equal("demo.example", Assert.Single(profile.HealthChecks).Host);
         Assert.Contains("adaptive-hosts", profile.Strategies);
+        Assert.Empty(profile.RelayCandidates);
     }
 
     [Fact]

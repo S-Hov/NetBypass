@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "id": "notion",
+  "name": "Notion",
+  "category": "Продуктивность",
+  "default": false,
+  "strategies": [
+    "adaptive-hosts"
+  ],
+  "hosts": [
+    {
+      "address": "45.155.204.190",
+      "hostname": "www.notion.so"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "calendar.notion.so"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "app.notion.com"
+    }
+  ],
+  "healthChecks": [
+    {
+      "targetAddress": "45.155.204.190",
+      "host": "www.notion.so",
+      "port": 443,
+      "protocol": "https"
+    }
+  ],
+  "relayCandidates": []
+}

@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "id": "tidal",
+  "name": "Tidal",
+  "category": "Музыка",
+  "default": false,
+  "strategies": [
+    "adaptive-hosts"
+  ],
+  "hosts": [
+    {
+      "address": "103.27.157.38",
+      "hostname": "api.tidal.com"
+    },
+    {
+      "address": "103.27.157.38",
+      "hostname": "listen.tidal.com"
+    },
+    {
+      "address": "103.27.157.38",
+      "hostname": "login.tidal.com"
+    },
+    {
+      "address": "103.27.157.38",
+      "hostname": "auth.tidal.com"
+    },
+    {
+      "address": "103.27.157.38",
+      "hostname": "link.tidal.com"
+    },
+    {
+      "address": "103.27.157.38",
+      "hostname": "dd.tidal.com"
+    },
+    {
+      "address": "103.27.157.38",
+      "hostname": "resources.tidal.com"
+    },
+    {
+      "address": "103.27.157.38",
+      "hostname": "images.tidal.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "geolocation.onetrust.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "api.squareup.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "api-global.squareup.com"
+    }
+  ],
+  "healthChecks": [
+    {
+      "targetAddress": "103.27.157.38",
+      "host": "api.tidal.com",
+      "port": 443,
+      "protocol": "https"
+    },
+    {
+      "targetAddress": "45.155.204.190",
+      "host": "geolocation.onetrust.com",
+      "port": 443,
+      "protocol": "https"
+    }
+  ],
+  "relayCandidates": []
+}

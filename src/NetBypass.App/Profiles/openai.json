@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 1,
+  "id": "openai",
+  "name": "OpenAI / ChatGPT",
+  "category": "AI",
+  "default": false,
+  "strategies": [
+    "adaptive-hosts"
+  ],
+  "hosts": [
+    {
+      "address": "45.155.204.190",
+      "hostname": "chatgpt.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "ab.chatgpt.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "auth.openai.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "auth0.openai.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "platform.openai.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "cdn.oaistatic.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "files.oaiusercontent.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "tcr9i.chat.openai.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "webrtc.chatgpt.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "android.chat.openai.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "api.openai.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "operator.chatgpt.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "sora.chatgpt.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "videos.openai.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "ios.chat.openai.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "cdn.platform.openai.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "developers.openai.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "sdmntprukwest.oaiusercontent.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "sdmntpritalynorth.oaiusercontent.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "sdmntprpolandcentral.oaiusercontent.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "sdmntprnortheu.oaiusercontent.com"
+    }
+  ],
+  "healthChecks": [
+    {
+      "targetAddress": "45.155.204.190",
+      "host": "chatgpt.com",
+      "port": 443,
+      "protocol": "https"
+    }
+  ],
+  "relayCandidates": []
+}

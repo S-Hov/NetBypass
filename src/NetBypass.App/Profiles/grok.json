@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "id": "grok",
+  "name": "Grok",
+  "category": "AI",
+  "default": false,
+  "strategies": [
+    "adaptive-hosts"
+  ],
+  "hosts": [
+    {
+      "address": "45.155.204.190",
+      "hostname": "grok.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "accounts.x.ai"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "assets.grok.com"
+    }
+  ],
+  "healthChecks": [
+    {
+      "targetAddress": "45.155.204.190",
+      "host": "grok.com",
+      "port": 443,
+      "protocol": "https"
+    }
+  ],
+  "relayCandidates": []
+}

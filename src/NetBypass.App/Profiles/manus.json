@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "id": "manus",
+  "name": "Manus",
+  "category": "AI",
+  "default": false,
+  "strategies": [
+    "adaptive-hosts"
+  ],
+  "hosts": [
+    {
+      "address": "45.155.204.190",
+      "hostname": "manus.im"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "api.manus.im"
+    }
+  ],
+  "healthChecks": [
+    {
+      "targetAddress": "45.155.204.190",
+      "host": "manus.im",
+      "port": 443,
+      "protocol": "https"
+    }
+  ],
+  "relayCandidates": []
+}

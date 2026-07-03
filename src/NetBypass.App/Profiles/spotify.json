@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "id": "spotify",
+  "name": "Spotify",
+  "category": "Музыка",
+  "default": false,
+  "strategies": [
+    "adaptive-hosts"
+  ],
+  "hosts": [
+    {
+      "address": "45.155.204.190",
+      "hostname": "api.spotify.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "login5.spotify.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "encore.scdn.co"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "gew1-spclient.spotify.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "spclient.wg.spotify.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "api-partner.spotify.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "aet.spotify.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "www.spotify.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "accounts.spotify.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "open.spotify.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "accounts.scdn.co"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "gew1-dealer.spotify.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "www-growth.scdn.co"
+    }
+  ],
+  "healthChecks": [
+    {
+      "targetAddress": "45.155.204.190",
+      "host": "api.spotify.com",
+      "port": 443,
+      "protocol": "https"
+    }
+  ],
+  "relayCandidates": []
+}

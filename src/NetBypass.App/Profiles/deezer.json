@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "id": "deezer",
+  "name": "Deezer",
+  "category": "Музыка",
+  "default": false,
+  "strategies": [
+    "adaptive-hosts"
+  ],
+  "hosts": [
+    {
+      "address": "45.155.204.190",
+      "hostname": "deezer.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "www.deezer.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "payment.deezer.com"
+    }
+  ],
+  "healthChecks": [
+    {
+      "targetAddress": "45.155.204.190",
+      "host": "deezer.com",
+      "port": 443,
+      "protocol": "https"
+    }
+  ],
+  "relayCandidates": []
+}

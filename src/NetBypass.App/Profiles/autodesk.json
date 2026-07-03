@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "id": "autodesk",
+  "name": "Autodesk",
+  "category": "Программы",
+  "default": false,
+  "strategies": [
+    "adaptive-hosts"
+  ],
+  "hosts": [
+    {
+      "address": "45.155.204.190",
+      "hostname": "accounts.autodesk.com"
+    },
+    {
+      "address": "45.155.204.190",
+      "hostname": "www.autodesk.com"
+    }
+  ],
+  "healthChecks": [
+    {
+      "targetAddress": "45.155.204.190",
+      "host": "accounts.autodesk.com",
+      "port": 443,
+      "protocol": "https"
+    }
+  ],
+  "relayCandidates": []
+}

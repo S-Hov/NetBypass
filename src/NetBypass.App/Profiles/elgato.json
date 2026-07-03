@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "elgato",
+  "name": "Elgato",
+  "category": "Производители",
+  "default": false,
+  "strategies": [
+    "adaptive-hosts"
+  ],
+  "hosts": [
+    {
+      "address": "45.155.204.190",
+      "hostname": "www.elgato.com"
+    }
+  ],
+  "healthChecks": [
+    {
+      "targetAddress": "45.155.204.190",
+      "host": "www.elgato.com",
+      "port": 443,
+      "protocol": "https"
+    }
+  ],
+  "relayCandidates": []
+}

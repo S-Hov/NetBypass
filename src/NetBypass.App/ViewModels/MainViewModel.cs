@@ -51,15 +51,20 @@ public sealed class MainViewModel : ObservableObject
                 profile,
                 settings?.SelectedModuleIds?.Contains(profile.Id)
                     ?? !DisabledByDefault.Contains(profile.Id))));
+        AntiDpiServices = new ObservableCollection<AntiDpiServiceItemViewModel>(
+            CreateAntiDpiServices(settings?.SelectedAntiDpiServiceIds));
 
         foreach (var service in Services)
             service.PropertyChanged += OnServicePropertyChanged;
+        foreach (var service in AntiDpiServices)
+            service.PropertyChanged += OnAntiDpiServicePropertyChanged;
 
         ServicesView = CollectionViewSource.GetDefaultView(Services);
         ServicesView.GroupDescriptions.Add(
             new PropertyGroupDescription(nameof(ServiceItemViewModel.Category)));
 
         Diagnostics = new ObservableCollection<DiagnosticItemViewModel>();
+        Engines = new ObservableCollection<EngineCardViewModel>(CreateEngineCards());
         CleanupItems = new ObservableCollection<string>();
         LoadStoredDiagnostics();
 
@@ -69,7 +74,7 @@ public sealed class MainViewModel : ObservableObject
         ApplyCommand = new AsyncRelayCommand(
             ApplySelectedServicesAsync,
             () => !IsBusy
-                  && Services.Any(item => item.IsSelected)
+                  && HasSelectedBypassTarget
                   && HostsState != HostsState.Corrupted);
         DiagnoseCommand = new AsyncRelayCommand(
             DiagnoseSelectedAsync,
@@ -81,13 +86,16 @@ public sealed class MainViewModel : ObservableObject
         ClearAllCommand = new RelayCommand(() => SetAll(false));
         ShowHomeCommand = new RelayCommand(() => CurrentPage = AppPage.Home);
         ShowServicesCommand = new RelayCommand(() => CurrentPage = AppPage.Services);
+        ShowEnginesCommand = new RelayCommand(() => CurrentPage = AppPage.Engines);
         ShowDiagnosticsCommand = new RelayCommand(() => CurrentPage = AppPage.Diagnostics);
 
         RefreshState();
     }
 
     public ObservableCollection<ServiceItemViewModel> Services { get; }
+    public ObservableCollection<AntiDpiServiceItemViewModel> AntiDpiServices { get; }
     public ObservableCollection<DiagnosticItemViewModel> Diagnostics { get; }
+    public ObservableCollection<EngineCardViewModel> Engines { get; }
     public ObservableCollection<string> CleanupItems { get; }
     public ICollectionView ServicesView { get; }
     public AsyncRelayCommand PowerCommand { get; }
@@ -98,6 +106,7 @@ public sealed class MainViewModel : ObservableObject
     public RelayCommand ClearAllCommand { get; }
     public RelayCommand ShowHomeCommand { get; }
     public RelayCommand ShowServicesCommand { get; }
+    public RelayCommand ShowEnginesCommand { get; }
     public RelayCommand ShowDiagnosticsCommand { get; }
 
     public HostsState HostsState
@@ -134,6 +143,7 @@ public sealed class MainViewModel : ObservableObject
 
             OnPropertyChanged(nameof(IsHomePage));
             OnPropertyChanged(nameof(IsServicesPage));
+            OnPropertyChanged(nameof(IsEnginesPage));
             OnPropertyChanged(nameof(IsDiagnosticsPage));
         }
     }
@@ -170,6 +180,7 @@ public sealed class MainViewModel : ObservableObject
 
     public bool IsHomePage => CurrentPage == AppPage.Home;
     public bool IsServicesPage => CurrentPage == AppPage.Services;
+    public bool IsEnginesPage => CurrentPage == AppPage.Engines;
     public bool IsDiagnosticsPage => CurrentPage == AppPage.Diagnostics;
     public bool IsPowerOn => HostsState is HostsState.Active or HostsState.ChangesPending;
     public bool IsCorrupted => HostsState == HostsState.Corrupted;
@@ -186,6 +197,13 @@ public sealed class MainViewModel : ObservableObject
     }
     public bool HasPartialAvailability =>
         HasAvailabilitySummary && AvailableServiceCount < SelectedServiceCount;
+    public bool HasSelectedBypassTarget =>
+        Services.Any(item => item.IsSelected)
+        || AntiDpiServices.Any(item => item.IsSelected);
+    public string AntiDpiSelectionSummary =>
+        AntiDpiServices.Count(item => item.IsSelected) == 0
+            ? "GoodbyeDPI не будет запускаться автоматически для этих сервисов."
+            : $"Anti-DPI сервисов выбрано: {AntiDpiServices.Count(item => item.IsSelected)}.";
     public int SelectedServiceCount => Services.Count(item => item.IsSelected);
     public int AvailableServiceCount
     {
@@ -432,8 +450,18 @@ public sealed class MainViewModel : ObservableObject
     private async Task ApplySelectedServicesAsync()
     {
         var selected = Services.Where(item => item.IsSelected).ToArray();
+        var selectedAntiDpi = AntiDpiServices.Where(item => item.IsSelected).ToArray();
         if (selected.Length == 0)
+        {
+            _settingsService.Save(
+                [],
+                selectedAntiDpi.Select(item => item.Id));
+            OperationMessage = selectedAntiDpi.Length == 0
+                ? "Нет выбранных сервисов."
+                : "Выбор Anti-DPI сервисов сохранён. Адаптер GoodbyeDPI подключим следующим шагом.";
+            RefreshState();
             return;
+        }
 
         IsBusy = true;
         OperationMessage = string.Empty;
@@ -464,7 +492,9 @@ public sealed class MainViewModel : ObservableObject
             _hostsService.Apply(reachable.Select(item =>
                 BuildEffectiveModule(item, resultById[item.Profile.Id])));
             DnsCacheService.Flush();
-            _settingsService.Save(selected.Select(item => item.Module.Id));
+            _settingsService.Save(
+                selected.Select(item => item.Module.Id),
+                selectedAntiDpi.Select(item => item.Id));
             OperationMessage = failed.Length == 0
                 ? $"Все выбранные сервисы доступны: {reachable.Length} из {selected.Length}."
                 : $"Записи применены. Доступно сервисов: {reachable.Length} из {selected.Length}.";
@@ -609,9 +639,62 @@ public sealed class MainViewModel : ObservableObject
         RaiseAvailabilityProperties();
     }
 
+    private static IReadOnlyList<AntiDpiServiceItemViewModel> CreateAntiDpiServices(
+        IReadOnlySet<string>? selectedIds)
+    {
+        bool IsSelectedByDefault(string id) =>
+            selectedIds is null || selectedIds.Contains(id);
+
+        return
+        [
+            new AntiDpiServiceItemViewModel(
+                "youtube",
+                "YouTube",
+                "GoodbyeDPI",
+                "Будущий запуск Anti-DPI режима для видео и связанных доменов.",
+                IsSelectedByDefault("youtube")),
+            new AntiDpiServiceItemViewModel(
+                "discord",
+                "Discord",
+                "GoodbyeDPI",
+                "Будущий запуск Anti-DPI режима для голосовой связи, клиента и сайта.",
+                IsSelectedByDefault("discord"))
+        ];
+    }
+
+    private static IReadOnlyList<EngineCardViewModel> CreateEngineCards() =>
+    [
+        new EngineCardViewModel(
+            "GoodbyeDPI",
+            BypassEngineKind.AntiDpi,
+            "Первый к интеграции",
+            true,
+            ["YouTube", "Discord", "сервисы с DPI-блокировкой"],
+            "Windows-движок для обхода DPI. NetBypass будет запускать его как внешний процесс, создавать профиль доменов и проверять результат после старта.",
+            "Следующий шаг: адаптер, выбор папки с goodbyedpi.exe, запуск базового профиля и безопасная остановка."),
+        new EngineCardViewModel(
+            "zapret / zapret2",
+            BypassEngineKind.AntiDpi,
+            "В следующих обновлениях",
+            false,
+            ["YouTube", "Discord", "сложные DPI-сценарии"],
+            "Более гибкий Anti-DPI-инструмент с большим количеством стратегий. Подключим после общего lifecycle и журнала ресурсов.",
+            "Пока неактивно: сначала докажем безопасный запуск и cleanup на GoodbyeDPI."),
+        new EngineCardViewModel(
+            "ByeDPI",
+            BypassEngineKind.AntiDpi,
+            "В следующих обновлениях",
+            false,
+            ["резервный Anti-DPI режим"],
+            "Альтернативный внешний движок. Его удобно держать как запасной вариант, когда появится общий интерфейс адаптеров.",
+            "Пока неактивно: добавим после первого рабочего Anti-DPI адаптера.")
+    ];
+
     private void SetAll(bool value)
     {
         foreach (var service in Services)
+            service.IsSelected = value;
+        foreach (var service in AntiDpiServices)
             service.IsSelected = value;
     }
 
@@ -625,6 +708,17 @@ public sealed class MainViewModel : ObservableObject
         ApplyCommand.RaiseCanExecuteChanged();
         DiagnoseCommand.RaiseCanExecuteChanged();
         ApplyReachableCommand.RaiseCanExecuteChanged();
+    }
+
+    private void OnAntiDpiServicePropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(AntiDpiServiceItemViewModel.IsSelected))
+            return;
+
+        OperationMessage = string.Empty;
+        OnPropertyChanged(nameof(HasSelectedBypassTarget));
+        OnPropertyChanged(nameof(AntiDpiSelectionSummary));
+        ApplyCommand.RaiseCanExecuteChanged();
     }
 
     private void RefreshState()
@@ -723,6 +817,8 @@ public sealed class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(AvailabilitySummary));
         OnPropertyChanged(nameof(HasAvailabilitySummary));
         OnPropertyChanged(nameof(HasPartialAvailability));
+        OnPropertyChanged(nameof(HasSelectedBypassTarget));
+        OnPropertyChanged(nameof(AntiDpiSelectionSummary));
     }
 
     private void RunSafely(Action action)
@@ -788,6 +884,7 @@ public enum AppPage
 {
     Home,
     Services,
+    Engines,
     Diagnostics
 }
 

@@ -2,7 +2,9 @@ using System.Text.Json;
 
 namespace NetBypass.Core.Services;
 
-public sealed record AppSettings(HashSet<string>? SelectedModuleIds);
+public sealed record AppSettings(
+    HashSet<string>? SelectedModuleIds,
+    HashSet<string>? SelectedAntiDpiServiceIds = null);
 
 public sealed class SettingsService
 {
@@ -31,10 +33,14 @@ public sealed class SettingsService
         }
     }
 
-    public void Save(IEnumerable<string> selectedIds)
+    public void Save(
+        IEnumerable<string> selectedIds,
+        IEnumerable<string>? selectedAntiDpiServiceIds = null)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
-        var settings = new AppSettings(selectedIds.ToHashSet(StringComparer.OrdinalIgnoreCase));
+        var settings = new AppSettings(
+            selectedIds.ToHashSet(StringComparer.OrdinalIgnoreCase),
+            selectedAntiDpiServiceIds?.ToHashSet(StringComparer.OrdinalIgnoreCase));
         File.WriteAllText(_path, JsonSerializer.Serialize(settings, JsonOptions));
     }
 }

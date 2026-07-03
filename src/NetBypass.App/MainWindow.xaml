@@ -273,6 +273,24 @@
                         </StackPanel>
                     </Button>
 
+                    <Button Command="{Binding ShowEnginesCommand}">
+                        <Button.Style>
+                            <Style TargetType="Button"
+                                   BasedOn="{StaticResource NavigationButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsEnginesPage}" Value="True">
+                                        <Setter Property="Background" Value="#29253D"/>
+                                        <Setter Property="Foreground" Value="#C8BCFF"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="⚙" FontSize="17" Width="28"/>
+                            <TextBlock Text="Движки" FontSize="14"/>
+                        </StackPanel>
+                    </Button>
+
                     <Button Command="{Binding ShowDiagnosticsCommand}">
                         <Button.Style>
                             <Style TargetType="Button"
@@ -455,68 +473,141 @@
                     </StackPanel>
                 </Grid>
 
-                <Border Grid.Row="2"
-                        Background="{StaticResource PanelBrush}"
-                        CornerRadius="14"
-                        Padding="14">
-                    <ListView ItemsSource="{Binding ServicesView}"
-                              Background="Transparent"
-                              BorderThickness="0"
-                              Foreground="#F5F5F7"
-                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                              ScrollViewer.VerticalScrollBarVisibility="Auto">
-                        <ListView.ItemContainerStyle>
-                            <Style TargetType="ListViewItem">
-                                <Setter Property="Background" Value="Transparent"/>
-                                <Setter Property="BorderThickness" Value="0"/>
-                                <Setter Property="Padding" Value="0"/>
-                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                <Setter Property="Focusable" Value="False"/>
-                                <Setter Property="Template">
-                                    <Setter.Value>
-                                        <ControlTemplate TargetType="ListViewItem">
-                                            <Border Background="Transparent"
-                                                    Padding="{TemplateBinding Padding}">
-                                                <ContentPresenter/>
-                                            </Border>
-                                        </ControlTemplate>
-                                    </Setter.Value>
-                                </Setter>
-                            </Style>
-                        </ListView.ItemContainerStyle>
-                        <ListView.GroupStyle>
-                            <GroupStyle>
-                                <GroupStyle.HeaderTemplate>
+                <Grid Grid.Row="2">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Border Padding="16"
+                            CornerRadius="12"
+                            Background="#181A22"
+                            BorderBrush="#2A2E3A"
+                            BorderThickness="1"
+                            Margin="0,0,0,14">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="1.1*"/>
+                                <ColumnDefinition Width="1.4*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Margin="0,0,22,0">
+                                <TextBlock Text="Обход с использованием Anti-DPI"
+                                           FontSize="18"
+                                           FontWeight="SemiBold"/>
+                                <TextBlock Text="Эти сервисы будут запускаться через GoodbyeDPI, когда подключим адаптер. Сейчас сохраняем выбор."
+                                           Margin="0,6,0,0"
+                                           TextWrapping="Wrap"
+                                           Foreground="#9DA1B1"/>
+                                <TextBlock Text="{Binding AntiDpiSelectionSummary}"
+                                           Margin="0,12,0,0"
+                                           Foreground="#AFA0FF"
+                                           FontWeight="SemiBold"/>
+                            </StackPanel>
+
+                            <ItemsControl Grid.Column="1"
+                                          ItemsSource="{Binding AntiDpiServices}">
+                                <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <TextBlock Text="{Binding Name}"
-                                                   FontSize="17"
-                                                   FontWeight="SemiBold"
-                                                   Foreground="#AFA0FF"
-                                                   Margin="4,16,4,8"/>
+                                        <Border Padding="12"
+                                                Margin="0,0,0,8"
+                                                CornerRadius="10"
+                                                Background="#20232D">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Margin="0,0,16,0">
+                                                    <TextBlock Text="{Binding Name}"
+                                                               FontSize="15"
+                                                               FontWeight="SemiBold"/>
+                                                    <TextBlock Text="{Binding Description}"
+                                                               Margin="0,4,0,0"
+                                                               TextWrapping="Wrap"
+                                                               Foreground="#9095A6"
+                                                               FontSize="12"/>
+                                                    <TextBlock Text="{Binding EngineName}"
+                                                               Margin="0,7,0,0"
+                                                               Foreground="#61D6A3"
+                                                               FontSize="12"
+                                                               FontWeight="SemiBold"/>
+                                                </StackPanel>
+                                                <CheckBox Grid.Column="1"
+                                                          IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                          VerticalAlignment="Center"
+                                                          ToolTip="Включить будущий запуск через GoodbyeDPI"/>
+                                            </Grid>
+                                        </Border>
                                     </DataTemplate>
-                                </GroupStyle.HeaderTemplate>
-                            </GroupStyle>
-                        </ListView.GroupStyle>
-                        <ListView.ItemTemplate>
-                            <DataTemplate>
-                                <Grid Margin="4,6">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
-                                              Content="{Binding Name}"
-                                              FontSize="15"
-                                              VerticalAlignment="Center"/>
-                                    <TextBlock Grid.Column="1"
-                                               Foreground="#8D909D"
-                                               Text="{Binding EntryCount, StringFormat={}{0} доменов}"
-                                               Margin="20,0,4,0"/>
-                                </Grid>
-                            </DataTemplate>
-                        </ListView.ItemTemplate>
-                    </ListView>
-                </Border>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Grid>
+                    </Border>
+
+                    <Border Grid.Row="1"
+                            Background="{StaticResource PanelBrush}"
+                            CornerRadius="14"
+                            Padding="14">
+                        <ListView ItemsSource="{Binding ServicesView}"
+                                  Background="Transparent"
+                                  BorderThickness="0"
+                                  Foreground="#F5F5F7"
+                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                  ScrollViewer.VerticalScrollBarVisibility="Auto">
+                            <ListView.ItemContainerStyle>
+                                <Style TargetType="ListViewItem">
+                                    <Setter Property="Background" Value="Transparent"/>
+                                    <Setter Property="BorderThickness" Value="0"/>
+                                    <Setter Property="Padding" Value="0"/>
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                    <Setter Property="Focusable" Value="False"/>
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="ListViewItem">
+                                                <Border Background="Transparent"
+                                                        Padding="{TemplateBinding Padding}">
+                                                    <ContentPresenter/>
+                                                </Border>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ListView.ItemContainerStyle>
+                            <ListView.GroupStyle>
+                                <GroupStyle>
+                                    <GroupStyle.HeaderTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Name}"
+                                                       FontSize="17"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="#AFA0FF"
+                                                       Margin="4,16,4,8"/>
+                                        </DataTemplate>
+                                    </GroupStyle.HeaderTemplate>
+                                </GroupStyle>
+                            </ListView.GroupStyle>
+                            <ListView.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="4,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                  Content="{Binding Name}"
+                                                  FontSize="15"
+                                                  VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="1"
+                                                   Foreground="#8D909D"
+                                                   Text="{Binding EntryCount, StringFormat={}{0} доменов}"
+                                                   Margin="20,0,4,0"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+                    </Border>
+                </Grid>
 
                 <Grid Grid.Row="3" Margin="0,18,0,0">
                     <Grid.ColumnDefinitions>
@@ -709,6 +800,104 @@
                         </ListView.ItemTemplate>
                     </ListView>
                 </Border>
+            </Grid>
+
+            <Grid Visibility="{Binding IsEnginesPage, Converter={StaticResource BooleanToVisibility}}"
+                  Margin="36,30,36,26">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <StackPanel>
+                    <TextBlock Text="Движки"
+                               FontSize="28"
+                               FontWeight="Bold"/>
+                    <TextBlock Text="Внешние инструменты, которые NetBypass будет запускать через безопасные адаптеры"
+                               Margin="0,6,0,0"
+                               TextWrapping="Wrap"
+                               Foreground="#9095A6"/>
+                </StackPanel>
+
+                <ScrollViewer Grid.Row="1"
+                              Margin="0,22,0,0"
+                              VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel>
+                        <Border Padding="16,14"
+                                CornerRadius="10"
+                                Background="#181A22"
+                                BorderBrush="#252936"
+                                BorderThickness="1">
+                            <StackPanel>
+                                <TextBlock Text="Anti-DPI"
+                                           FontSize="19"
+                                           FontWeight="SemiBold"
+                                           Foreground="#E5E7F0"/>
+                                <TextBlock Text="Эти движки работают глубже, чем hosts: они запускаются отдельным процессом и помогают в сценариях DPI-блокировок."
+                                           Margin="0,6,0,0"
+                                           TextWrapping="Wrap"
+                                           Foreground="#A5A9B8"/>
+                            </StackPanel>
+                        </Border>
+
+                        <ItemsControl ItemsSource="{Binding Engines}"
+                                      Margin="0,14,0,0">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Margin="0,0,0,12"
+                                            Padding="16"
+                                            CornerRadius="10"
+                                            Background="#20232D"
+                                            BorderBrush="#2A2E3A"
+                                            BorderThickness="1">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Margin="0,0,18,0">
+                                                <TextBlock Text="{Binding Category}"
+                                                           Foreground="#AFA0FF"
+                                                           FontSize="12"
+                                                           FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Name}"
+                                                           Margin="0,5,0,0"
+                                                           FontSize="19"
+                                                           FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Description}"
+                                                           Margin="0,8,0,0"
+                                                           TextWrapping="Wrap"
+                                                           Foreground="#B6BAC8"/>
+                                                <TextBlock Text="Сервисы"
+                                                           Margin="0,14,0,0"
+                                                           Foreground="#777C8D"
+                                                           FontSize="11"/>
+                                                <TextBlock Text="{Binding SupportedServicesText}"
+                                                           Margin="0,4,0,0"
+                                                           TextWrapping="Wrap"
+                                                           Foreground="#E5E7F0"/>
+                                                <TextBlock Text="{Binding NextStep}"
+                                                           Margin="0,12,0,0"
+                                                           TextWrapping="Wrap"
+                                                           Foreground="#8F94A5"/>
+                                            </StackPanel>
+                                            <Border Grid.Column="1"
+                                                    Padding="10,6"
+                                                    CornerRadius="8"
+                                                    Background="#171920"
+                                                    VerticalAlignment="Top">
+                                                <TextBlock Text="{Binding State}"
+                                                           Foreground="{Binding StatusColor}"
+                                                           FontWeight="SemiBold"/>
+                                            </Border>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
             </Grid>
         </Grid>
     </Grid>

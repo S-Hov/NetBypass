@@ -28,15 +28,27 @@ public sealed class GoodbyeDpiInstallService
 
     public string? FindExecutable()
     {
-        if (!Directory.Exists(InstallRoot))
-            return null;
-
-        return Directory.EnumerateFiles(InstallRoot, "goodbyedpi.exe", SearchOption.AllDirectories)
-            .OrderBy(path => path.Length)
+        return FindExecutables()
+            .OrderByDescending(Is64BitExecutable)
+            .ThenBy(path => path.Length)
             .FirstOrDefault();
     }
 
+    public IReadOnlyList<string> FindExecutables()
+    {
+        if (!Directory.Exists(InstallRoot))
+            return [];
+
+        return Directory.EnumerateFiles(InstallRoot, "goodbyedpi.exe", SearchOption.AllDirectories)
+            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
     public bool IsInstalled() => FindExecutable() is not null;
+
+    private static bool Is64BitExecutable(string path) =>
+        path.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            .Any(part => string.Equals(part, "x86_64", StringComparison.OrdinalIgnoreCase));
 
     public async Task<GoodbyeDpiInstallResult> InstallAsync(CancellationToken cancellationToken = default)
     {

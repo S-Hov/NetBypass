@@ -9,6 +9,15 @@ public sealed class GoodbyeDpiRuntimeService
 {
     public const string LegacyTaskName = "NetBypass GoodbyeDPI";
 
+    private static readonly string[] WinDivertServiceNames =
+    [
+        "WinDivert",
+        "WinDivert1.4",
+        "WinDivert14",
+        "WinDivert2.2",
+        "WinDivert22"
+    ];
+
     private static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> DomainsByService =
         new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
         {
@@ -63,6 +72,8 @@ public sealed class GoodbyeDpiRuntimeService
 
     public async Task<EngineRunResult> EnableAsync(
         IEnumerable<string> selectedServiceIds,
+        IReadOnlyList<string>? strategyArguments = null,
+        bool forceRestart = false,
         CancellationToken cancellationToken = default)
     {
         var serviceIds = selectedServiceIds
@@ -78,11 +89,17 @@ public sealed class GoodbyeDpiRuntimeService
 
         await RemoveLegacyTaskAsync(cancellationToken);
 
-        if (_commandRunner.IsProcessRunning(executable))
+        if (!forceRestart && _commandRunner.IsProcessRunning(executable))
         {
             return new EngineRunResult(
                 true,
                 $"GoodbyeDPI уже работает для сервисов: {string.Join(", ", serviceIds)}.");
+        }
+
+        if (forceRestart)
+        {
+            StopAllInstalledProcesses();
+            await CleanupWinDivertDriversAsync(cancellationToken);
         }
 
         Directory.CreateDirectory(RuntimeRoot);
@@ -91,7 +108,9 @@ public sealed class GoodbyeDpiRuntimeService
 
         var startResult = await _commandRunner.StartDetachedAsync(
             executable,
-            BuildArguments(BlacklistPath),
+            strategyArguments is null
+                ? BuildArguments(BlacklistPath)
+                : ResolveArguments(strategyArguments, BlacklistPath),
             Path.GetDirectoryName(executable),
             cancellationToken,
             requireAdministrator: !_commandRunner.IsAdministrator());
@@ -109,9 +128,8 @@ public sealed class GoodbyeDpiRuntimeService
 
     public async Task<EngineStopResult> DisableAsync(CancellationToken cancellationToken = default)
     {
-        var executable = _installService.FindExecutable();
-        if (executable is not null)
-            _commandRunner.StopProcessesByPath(executable);
+        StopAllInstalledProcesses();
+        await CleanupWinDivertDriversAsync(cancellationToken);
 
         await RemoveLegacyTaskAsync(cancellationToken);
 
@@ -143,6 +161,24 @@ public sealed class GoodbyeDpiRuntimeService
         "1253"
     ];
 
+    public static IReadOnlyList<string> ResolveArguments(
+        IEnumerable<string> arguments,
+        string blacklistPath) =>
+        arguments
+            .Select(argument => string.Equals(
+                argument,
+                "{blacklist}",
+                StringComparison.OrdinalIgnoreCase)
+                ? blacklistPath
+                : argument)
+            .ToArray();
+
+    private void StopAllInstalledProcesses()
+    {
+        foreach (var executable in _installService.FindExecutables())
+            _commandRunner.StopProcessesByPath(executable);
+    }
+
     private void CleanupRuntimeFiles()
     {
         if (File.Exists(BlacklistPath))
@@ -156,6 +192,23 @@ public sealed class GoodbyeDpiRuntimeService
             ["/Delete", "/TN", LegacyTaskName, "/F"],
             cancellationToken,
             requireAdministrator: !_commandRunner.IsAdministrator());
+    }
+
+    private async Task CleanupWinDivertDriversAsync(CancellationToken cancellationToken)
+    {
+        foreach (var serviceName in WinDivertServiceNames)
+        {
+            await _commandRunner.RunAsync(
+                "sc.exe",
+                ["stop", serviceName],
+                cancellationToken,
+                requireAdministrator: !_commandRunner.IsAdministrator());
+            await _commandRunner.RunAsync(
+                "sc.exe",
+                ["delete", serviceName],
+                cancellationToken,
+                requireAdministrator: !_commandRunner.IsAdministrator());
+        }
     }
 
     private static string ToCommandFailure(string prefix, CommandResult result)
@@ -349,7 +402,10 @@ public sealed class SystemCommandRunner : ISystemCommandRunner
             try
             {
                 if (string.Equals(process.MainModule?.FileName, fullPath, StringComparison.OrdinalIgnoreCase))
+                {
                     process.Kill(entireProcessTree: true);
+                    process.WaitForExit(2000);
+                }
             }
             catch
             {

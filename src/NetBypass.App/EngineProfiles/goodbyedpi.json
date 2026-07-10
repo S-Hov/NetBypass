@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "catalogVersion": 1,
+  "engine": "goodbyedpi",
+  "engineVersion": "0.2.2",
+  "profiles": [
+    {
+      "id": "gdpi-modern-auto-ttl",
+      "name": "Modern Auto TTL",
+      "arguments": ["-5", "--blacklist", "{blacklist}", "--dns-addr", "77.88.8.8", "--dns-port", "1253", "--dnsv6-addr", "2a02:6b8::feed:0ff", "--dnsv6-port", "1253"],
+      "priority": 10,
+      "risk": "medium",
+      "supportsQuic": false
+    },
+    {
+      "id": "gdpi-modern-wrong-seq",
+      "name": "Modern Wrong Sequence",
+      "arguments": ["-6", "--blacklist", "{blacklist}", "--dns-addr", "77.88.8.8", "--dns-port", "1253", "--dnsv6-addr", "2a02:6b8::feed:0ff", "--dnsv6-port", "1253"],
+      "priority": 20,
+      "risk": "medium",
+      "supportsQuic": false
+    },
+    {
+      "id": "gdpi-compatible",
+      "name": "Maximum Compatibility",
+      "arguments": ["-1", "--blacklist", "{blacklist}", "--dns-addr", "77.88.8.8", "--dns-port", "1253", "--dnsv6-addr", "2a02:6b8::feed:0ff", "--dnsv6-port", "1253"],
+      "priority": 30,
+      "risk": "low",
+      "supportsQuic": false
+    },
+    {
+      "id": "gdpi-fast-fragmentation",
+      "name": "Fast HTTPS Fragmentation",
+      "arguments": ["-3", "--blacklist", "{blacklist}", "--dns-addr", "77.88.8.8", "--dns-port", "1253", "--dnsv6-addr", "2a02:6b8::feed:0ff", "--dnsv6-port", "1253"],
+      "priority": 40,
+      "risk": "low",
+      "supportsQuic": false
+    },
+    {
+      "id": "gdpi-wrong-checksum",
+      "name": "Wrong Checksum + Reverse Fragmentation",
+      "arguments": ["-f", "2", "-e", "2", "--wrong-chksum", "--reverse-frag", "--max-payload", "1200", "--blacklist", "{blacklist}", "--dns-addr", "77.88.8.8", "--dns-port", "1253", "--dnsv6-addr", "2a02:6b8::feed:0ff", "--dnsv6-port", "1253"],
+      "priority": 50,
+      "risk": "experimental",
+      "supportsQuic": false
+    },
+    {
+      "id": "gdpi-wrong-seq-checksum",
+      "name": "Wrong Sequence + Checksum",
+      "arguments": ["-f", "2", "-e", "2", "--wrong-seq", "--wrong-chksum", "--reverse-frag", "--max-payload", "1200", "--blacklist", "{blacklist}", "--dns-addr", "77.88.8.8", "--dns-port", "1253", "--dnsv6-addr", "2a02:6b8::feed:0ff", "--dnsv6-port", "1253"],
+      "priority": 60,
+      "risk": "experimental",
+      "supportsQuic": false
+    }
+  ],
+  "targets": [
+    {
+      "serviceId": "youtube",
+      "name": "YouTube",
+      "host": "www.youtube.com",
+      "port": 443,
+      "acceptedHttpStatuses": [200, 204, 301, 302, 303, 307, 308],
+      "isControl": false
+    },
+    {
+      "serviceId": "discord",
+      "name": "Discord",
+      "host": "discord.com",
+      "port": 443,
+      "acceptedHttpStatuses": [200, 204, 301, 302, 303, 307, 308],
+      "isControl": false
+    },
+    {
+      "serviceId": "control-google",
+      "name": "Контрольный Google",
+      "host": "www.google.com",
+      "port": 443,
+      "acceptedHttpStatuses": [200, 204, 301, 302, 303, 307, 308],
+      "isControl": true
+    }
+  ]
+}

@@ -53,6 +53,8 @@ public sealed class GoodbyeDpiRuntimeServiceTests
         Assert.True(result.IsStopped);
         Assert.False(runtime.IsEnabled());
         Assert.Contains(GoodbyeDpiRuntimeService.LegacyTaskName, runner.RunArguments);
+        Assert.Contains("WinDivert1.4", runner.RunArguments);
+        Assert.Contains("delete", runner.RunArguments);
         Assert.EndsWith("goodbyedpi.exe", runner.StoppedPath);
     }
 

@@ -37,4 +37,21 @@ public sealed class GoodbyeDpiInstallServiceTests
         Assert.False(service.IsInstalled());
         Assert.Null(service.FindExecutable());
     }
+
+    [Fact]
+    public void FindExecutable_PrefersX64Binary()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        var x86 = Path.Combine(directory, "current", "x86");
+        var x64 = Path.Combine(directory, "current", "x86_64");
+        Directory.CreateDirectory(x86);
+        Directory.CreateDirectory(x64);
+        File.WriteAllText(Path.Combine(x86, "goodbyedpi.exe"), "x86");
+        File.WriteAllText(Path.Combine(x64, "goodbyedpi.exe"), "x64");
+
+        var executable = new GoodbyeDpiInstallService(directory).FindExecutable();
+
+        Assert.NotNull(executable);
+        Assert.Contains("x86_64", executable, StringComparison.OrdinalIgnoreCase);
+    }
 }

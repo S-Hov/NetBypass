@@ -27,6 +27,7 @@ public sealed class MainViewModel : ObservableObject
     private readonly EndpointSelectionStore _endpointSelectionStore = new();
     private readonly GoodbyeDpiInstallService _goodbyeDpiInstallService = new();
     private readonly GoodbyeDpiRuntimeService _goodbyeDpiRuntimeService;
+    private readonly GoodbyeDpiStrategyOptimizer _goodbyeDpiStrategyOptimizer;
     private readonly StartupTaskService _startupTaskService = new();
     private readonly NetworkDiagnosticService _diagnosticService = new(
         new CloudflareGoogleDohResolver(),
@@ -52,6 +53,14 @@ public sealed class MainViewModel : ObservableObject
     public MainViewModel()
     {
         _goodbyeDpiRuntimeService = new GoodbyeDpiRuntimeService(_goodbyeDpiInstallService);
+        var strategyCatalogPath = Path.Combine(
+            AppContext.BaseDirectory,
+            "EngineProfiles",
+            "goodbyedpi.json");
+        var strategyCatalog = new AntiDpiStrategyCatalogService().Load(strategyCatalogPath);
+        _goodbyeDpiStrategyOptimizer = new GoodbyeDpiStrategyOptimizer(
+            _goodbyeDpiRuntimeService,
+            strategyCatalog);
         var modulesPath = Path.Combine(AppContext.BaseDirectory, "Modules");
         var profiles = new ServiceProfileLoader().LoadDirectory(modulesPath);
         var settings = _settingsService.Load();
@@ -261,7 +270,7 @@ public sealed class MainViewModel : ObservableObject
     public string GoodbyeDpiRuntimeStatus => !IsGoodbyeDpiInstalled
         ? "GoodbyeDPI ещё не скачан."
         : IsGoodbyeDpiRuntimeEnabled
-            ? "GoodbyeDPI сейчас работает."
+            ? "GoodbyeDPI запущен, а выбранная стратегия прошла TCP/TLS-проверку."
             : "GoodbyeDPI скачан, но фоновый режим сейчас выключен.";
     public bool HasSelectedBypassTarget =>
         Services.Any(item => item.IsSelected)
@@ -786,11 +795,13 @@ public sealed class MainViewModel : ObservableObject
             return "Anti-DPI сервисы не выбраны, GoodbyeDPI выключен.";
         }
 
-        var started = await _goodbyeDpiRuntimeService.EnableAsync(
-            selectedAntiDpi.Select(item => item.Id));
-        IsGoodbyeDpiRuntimeEnabled = started.IsStarted;
-        EngineOperationMessage = started.Message;
-        return started.Message;
+        var progress = new Progress<string>(message => EngineOperationMessage = message);
+        var optimized = await _goodbyeDpiStrategyOptimizer.EnableBestAsync(
+            selectedAntiDpi.Select(item => item.Id),
+            progress);
+        IsGoodbyeDpiRuntimeEnabled = optimized.IsSuccessful;
+        EngineOperationMessage = optimized.Message;
+        return optimized.Message;
     }
 
     private async Task DisableGoodbyeDpiAsync()

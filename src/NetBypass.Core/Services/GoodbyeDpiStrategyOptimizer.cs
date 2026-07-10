@@ -34,16 +34,30 @@ public sealed class GoodbyeDpiStrategyOptimizer(
         if (savedProfile is not null)
         {
             progress?.Report($"Проверяем сохранённую стратегию «{savedProfile.Name}»...");
-            var savedAttempt = await RunAndProbeAsync(savedProfile, serviceIds, cancellationToken);
+            var savedAttempt = await RunAndProbeAsync(
+                savedProfile,
+                serviceIds,
+                saved!.Addresses,
+                progress,
+                cancellationToken);
             if (savedAttempt.IsViable)
             {
+                var addresses = BuildAddressMap(savedAttempt);
+                _selectionStore.Save(saved! with
+                {
+                    Score = savedAttempt.Score,
+                    VerifiedAt = DateTimeOffset.UtcNow,
+                    Addresses = addresses
+                });
                 return new AntiDpiOptimizationResult(
                     true,
                     $"GoodbyeDPI работает со стратегией «{savedProfile.Name}».",
                     savedProfile,
                     true,
-                    [savedAttempt]);
+                    [savedAttempt],
+                    addresses);
             }
+            progress?.Report($"Стратегия «{savedProfile.Name}» больше не работает. Запускаем полный подбор.");
         }
 
         var attempts = new List<AntiDpiStrategyAttempt>();
@@ -57,7 +71,16 @@ public sealed class GoodbyeDpiStrategyOptimizer(
             var profile = profiles[index];
             progress?.Report(
                 $"Проверяем стратегию {index + 1} из {profiles.Length}: «{profile.Name}»...");
-            attempts.Add(await RunAndProbeAsync(profile, serviceIds, cancellationToken));
+            var attempt = await RunAndProbeAsync(
+                profile,
+                serviceIds,
+                preferredAddresses: null,
+                progress,
+                cancellationToken);
+            attempts.Add(attempt);
+            progress?.Report(attempt.IsViable
+                ? $"✓ «{profile.Name}»: все проверки пройдены."
+                : $"× «{profile.Name}»: {attempt.Message}");
         }
 
         var bestAttempt = attempts
@@ -87,6 +110,7 @@ public sealed class GoodbyeDpiStrategyOptimizer(
         }
 
         var bestProfile = profiles.First(profile => profile.Id == bestAttempt.ProfileId);
+        var bestAddresses = BuildAddressMap(bestAttempt);
         if (!string.Equals(profiles[^1].Id, bestProfile.Id, StringComparison.OrdinalIgnoreCase))
         {
             progress?.Report($"Включаем лучшую стратегию «{bestProfile.Name}»...");
@@ -114,19 +138,23 @@ public sealed class GoodbyeDpiStrategyOptimizer(
             bestProfile.Id,
             serviceIds,
             bestAttempt.Score,
-            DateTimeOffset.UtcNow));
+            DateTimeOffset.UtcNow,
+            bestAddresses));
 
         return new AntiDpiOptimizationResult(
             true,
             $"GoodbyeDPI проверен. Выбрана стратегия «{bestProfile.Name}» (оценка {bestAttempt.Score}).",
             bestProfile,
             false,
-            attempts);
+            attempts,
+            bestAddresses);
     }
 
     private async Task<AntiDpiStrategyAttempt> RunAndProbeAsync(
         AntiDpiStrategyProfile profile,
         IReadOnlyList<string> serviceIds,
+        IReadOnlyDictionary<string, string>? preferredAddresses,
+        IProgress<string>? progress,
         CancellationToken cancellationToken)
     {
         var started = await runtimeService.EnableAsync(
@@ -146,7 +174,12 @@ public sealed class GoodbyeDpiStrategyOptimizer(
                 started.Message);
         }
 
-        var targets = await _probe.ProbeAsync(serviceIds, catalog.Targets, cancellationToken);
+        var targets = await _probe.ProbeAsync(
+            serviceIds,
+            catalog.Targets,
+            preferredAddresses,
+            progress,
+            cancellationToken);
         var selected = serviceIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
         var requiredTargets = targets.Where(target =>
             target.IsControl || selected.Contains(target.ServiceId)).ToArray();
@@ -178,6 +211,14 @@ public sealed class GoodbyeDpiStrategyOptimizer(
         && string.Equals(selection.EngineVersion, catalog.EngineVersion, StringComparison.OrdinalIgnoreCase)
         && selection.ServiceIds.ToHashSet(StringComparer.OrdinalIgnoreCase)
             .SetEquals(serviceIds);
+
+    private static Dictionary<string, string> BuildAddressMap(AntiDpiStrategyAttempt attempt) =>
+        attempt.Targets
+            .Where(target => !target.IsControl && target.IsReachable && target.Address is not null)
+            .ToDictionary(
+                target => target.ServiceId,
+                target => target.Address!,
+                StringComparer.OrdinalIgnoreCase);
 
     private static int CalculateScore(
         IReadOnlyCollection<AntiDpiTargetProbeResult> targets,

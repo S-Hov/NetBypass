@@ -22,7 +22,8 @@ public sealed record AntiDpiProbeTarget(
     string Host,
     int Port,
     HashSet<int> AcceptedHttpStatuses,
-    bool IsControl = false);
+    bool IsControl = false,
+    List<string>? CandidateHosts = null);
 
 public sealed record AntiDpiTargetProbeResult(
     string ServiceId,
@@ -52,11 +53,13 @@ public sealed record AntiDpiStrategySelection(
     string ProfileId,
     IReadOnlyList<string> ServiceIds,
     int Score,
-    DateTimeOffset VerifiedAt);
+    DateTimeOffset VerifiedAt,
+    Dictionary<string, string>? Addresses = null);
 
 public sealed record AntiDpiOptimizationResult(
     bool IsSuccessful,
     string Message,
     AntiDpiStrategyProfile? Profile,
     bool UsedSavedSelection,
-    IReadOnlyList<AntiDpiStrategyAttempt> Attempts);
+    IReadOnlyList<AntiDpiStrategyAttempt> Attempts,
+    IReadOnlyDictionary<string, string>? Addresses = null);

@@ -60,7 +60,8 @@
       "host": "www.youtube.com",
       "port": 443,
       "acceptedHttpStatuses": [200, 204, 301, 302, 303, 307, 308],
-      "isControl": false
+      "isControl": false,
+      "candidateHosts": ["www.google.com", "www.gstatic.com"]
     },
     {
       "serviceId": "discord",
@@ -68,7 +69,8 @@
       "host": "discord.com",
       "port": 443,
       "acceptedHttpStatuses": [200, 204, 301, 302, 303, 307, 308],
-      "isControl": false
+      "isControl": false,
+      "candidateHosts": ["www.cloudflare.com", "one.one.one.one"]
     },
     {
       "serviceId": "control-google",
@@ -76,7 +78,8 @@
       "host": "www.google.com",
       "port": 443,
       "acceptedHttpStatuses": [200, 204, 301, 302, 303, 307, 308],
-      "isControl": true
+      "isControl": true,
+      "candidateHosts": []
     }
   ]
 }

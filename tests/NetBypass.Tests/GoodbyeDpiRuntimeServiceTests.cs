@@ -68,6 +68,23 @@ public sealed class GoodbyeDpiRuntimeServiceTests
     }
 
     [Fact]
+    public void BuildHostsEntries_MapsSelectedServicesToTheirWinningAddresses()
+    {
+        var entries = GoodbyeDpiRuntimeService.BuildHostsEntries(
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["youtube"] = "142.251.154.119",
+                ["discord"] = "104.16.124.96"
+            });
+
+        Assert.Contains(entries, entry =>
+            entry.Hostname == "www.youtube.com" && entry.Address == "142.251.154.119");
+        Assert.Contains(entries, entry =>
+            entry.Hostname == "discord.com" && entry.Address == "104.16.124.96");
+        Assert.DoesNotContain(entries, entry => entry.Hostname == "www.google.com");
+    }
+
+    [Fact]
     public async Task EnableAsync_ElevatesEngineWhenAppIsNotAdministrator()
     {
         var directory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());

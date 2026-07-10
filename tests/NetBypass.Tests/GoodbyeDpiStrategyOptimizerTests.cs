@@ -22,6 +22,8 @@ public sealed class GoodbyeDpiStrategyOptimizerTests
         Assert.True(result.Attempts[1].IsViable);
         Assert.Contains("-6", fixture.Runner.LastStartArguments);
         Assert.Equal("working", fixture.Store.Load()?.ProfileId);
+        Assert.Equal("203.0.113.10", result.Addresses?["youtube"]);
+        Assert.Equal("203.0.113.10", fixture.Store.Load()?.Addresses?["youtube"]);
     }
 
     [Fact]
@@ -46,6 +48,7 @@ public sealed class GoodbyeDpiStrategyOptimizerTests
         Assert.Equal("working", result.Profile?.Id);
         Assert.Single(result.Attempts);
         Assert.Equal(1, fixture.Probe.CallCount);
+        Assert.Equal("203.0.113.10", fixture.Store.Load()?.Addresses?["youtube"]);
     }
 
     [Fact]
@@ -144,6 +147,8 @@ public sealed class GoodbyeDpiStrategyOptimizerTests
         public Task<IReadOnlyList<AntiDpiTargetProbeResult>> ProbeAsync(
             IReadOnlyCollection<string> selectedServiceIds,
             IReadOnlyList<AntiDpiProbeTarget> targets,
+            IReadOnlyDictionary<string, string>? preferredAddresses,
+            IProgress<string>? progress,
             CancellationToken cancellationToken)
         {
             CallCount++;

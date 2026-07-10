@@ -411,6 +411,46 @@
                                    TextAlignment="Center"
                                    Foreground="#8F94A5"/>
 
+                        <Border Visibility="{Binding HasEngineActivityLog, Converter={StaticResource BooleanToVisibility}}"
+                                Margin="0,14,0,0"
+                                Padding="14,12"
+                                CornerRadius="10"
+                                Background="#151820"
+                                BorderBrush="#292D3A"
+                                BorderThickness="1">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,8">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Ellipse Width="8"
+                                                 Height="8"
+                                                 Margin="0,0,8,0"
+                                                 VerticalAlignment="Center"
+                                                 Fill="#7C5CFC"/>
+                                        <TextBlock Text="Подбор Anti-DPI"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="#E7E8EF"/>
+                                    </StackPanel>
+                                    <TextBlock Text="идёт проверка"
+                                               HorizontalAlignment="Right"
+                                               Foreground="#8D92A3"
+                                               FontSize="12"
+                                               Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibility}}"/>
+                                </Grid>
+                                <ItemsControl ItemsSource="{Binding EngineActivityLog}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding}"
+                                                       Margin="0,2,0,0"
+                                                       FontFamily="Consolas"
+                                                       FontSize="11.5"
+                                                       Foreground="#9DA3B6"
+                                                       TextWrapping="Wrap"/>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+
                         <Border Visibility="{Binding HasCleanupItems, Converter={StaticResource BooleanToVisibility}}"
                                 Margin="0,12,0,0"
                                 Padding="16,12"

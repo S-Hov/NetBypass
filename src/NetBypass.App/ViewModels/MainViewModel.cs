@@ -28,6 +28,7 @@ public sealed class MainViewModel : ObservableObject
     private readonly GoodbyeDpiInstallService _goodbyeDpiInstallService = new();
     private readonly GoodbyeDpiRuntimeService _goodbyeDpiRuntimeService;
     private readonly GoodbyeDpiStrategyOptimizer _goodbyeDpiStrategyOptimizer;
+    private readonly AntiDpiStrategySelectionStore _antiDpiStrategySelectionStore = new();
     private readonly StartupTaskService _startupTaskService = new();
     private readonly NetworkDiagnosticService _diagnosticService = new(
         new CloudflareGoogleDohResolver(),
@@ -49,6 +50,7 @@ public sealed class MainViewModel : ObservableObject
     private bool _isStartupSettingBusy;
     private string _startupOperationMessage = string.Empty;
     private HashSet<string> _unavailableServiceIds = new(StringComparer.OrdinalIgnoreCase);
+    private AntiDpiOptimizationResult? _lastAntiDpiOptimizationResult;
 
     public MainViewModel()
     {
@@ -60,7 +62,8 @@ public sealed class MainViewModel : ObservableObject
         var strategyCatalog = new AntiDpiStrategyCatalogService().Load(strategyCatalogPath);
         _goodbyeDpiStrategyOptimizer = new GoodbyeDpiStrategyOptimizer(
             _goodbyeDpiRuntimeService,
-            strategyCatalog);
+            strategyCatalog,
+            selectionStore: _antiDpiStrategySelectionStore);
         var modulesPath = Path.Combine(AppContext.BaseDirectory, "Modules");
         var profiles = new ServiceProfileLoader().LoadDirectory(modulesPath);
         var settings = _settingsService.Load();
@@ -88,6 +91,7 @@ public sealed class MainViewModel : ObservableObject
         Diagnostics = new ObservableCollection<DiagnosticItemViewModel>();
         Engines = new ObservableCollection<EngineCardViewModel>(CreateEngineCards(IsGoodbyeDpiInstalled));
         CleanupItems = new ObservableCollection<string>();
+        EngineActivityLog = new ObservableCollection<string>();
         LoadStoredDiagnostics();
 
         PowerCommand = new AsyncRelayCommand(
@@ -123,6 +127,7 @@ public sealed class MainViewModel : ObservableObject
     public ObservableCollection<DiagnosticItemViewModel> Diagnostics { get; }
     public ObservableCollection<EngineCardViewModel> Engines { get; }
     public ObservableCollection<string> CleanupItems { get; }
+    public ObservableCollection<string> EngineActivityLog { get; }
     public ICollectionView ServicesView { get; }
     public AsyncRelayCommand PowerCommand { get; }
     public AsyncRelayCommand ApplyCommand { get; }
@@ -223,6 +228,7 @@ public sealed class MainViewModel : ObservableObject
     public bool HasUnavailableServices => _unavailableServiceIds.Count > 0;
     public bool HasAvailabilitySummary => IsPowerOn && SelectedServiceCount > 0;
     public bool HasCleanupItems => CleanupItems.Count > 0;
+    public bool HasEngineActivityLog => EngineActivityLog.Count > 0;
     public string CleanupTitle
     {
         get => _cleanupTitle;
@@ -546,7 +552,16 @@ public sealed class MainViewModel : ObservableObject
             .ToArray();
 
         if (IsGoodbyeDpiInstalled && selectedAntiDpi.Length > 0)
+        {
             await SyncGoodbyeDpiAsync(selectedAntiDpi);
+            var regularModules = GetExpectedActiveModules(
+                    Services.Where(item => item.IsSelected).ToArray())
+                .Where(module => module.Id != "anti-dpi-routing");
+            ApplyManagedModules(
+                regularModules,
+                _lastAntiDpiOptimizationResult?.Addresses);
+            DnsCacheService.Flush();
+        }
     }
 
     private async Task UpdateStartupSettingAsync(bool enabled)
@@ -654,61 +669,69 @@ public sealed class MainViewModel : ObservableObject
     {
         var selected = Services.Where(item => item.IsSelected).ToArray();
         var selectedAntiDpi = AntiDpiServices.Where(item => item.IsSelected).ToArray();
-        if (selected.Length == 0)
-        {
-            _settingsService.Save(
-                [],
-                IsGoodbyeDpiInstalled
-                    ? selectedAntiDpi.Select(item => item.Id)
-                    : []);
-            var engineMessage = await SyncGoodbyeDpiAsync(selectedAntiDpi);
-            OperationMessage = selectedAntiDpi.Length == 0
-                ? "Нет выбранных сервисов."
-                : engineMessage;
-            RefreshState();
-            return;
-        }
-
         IsBusy = true;
-        OperationMessage = string.Empty;
+        OperationMessage = selected.Length == 0 && selectedAntiDpi.Length > 0
+            ? "Подбираем Anti-DPI стратегию и доступные edge-IP..."
+            : string.Empty;
         ClearCleanupReport();
+        ClearEngineActivityLog();
+        _lastAntiDpiOptimizationResult = null;
         try
         {
-            var results = await DiagnoseWithProgressAsync(selected);
-            SaveAndDisplayDiagnostics(results);
-
-            var failed = results.Where(result => !result.IsReachable).ToArray();
-            var reachableIds = results.Where(result => result.IsReachable)
-                .Select(result => result.ServiceId)
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
-            var reachable = selected.Where(item => reachableIds.Contains(item.Profile.Id))
-                .ToArray();
-
-            if (reachable.Length == 0)
+            ServiceModule[] effectiveModules = [];
+            ServiceDiagnosticResult[] failed = [];
+            var reachableCount = 0;
+            if (selected.Length > 0)
             {
-                VerificationState = VerificationState.Unavailable;
-                OperationMessage =
-                    "Не удалось применить записи: ни один выбранный сервис не прошёл проверку.";
-                return;
+                var results = await DiagnoseWithProgressAsync(selected);
+                SaveAndDisplayDiagnostics(results);
+                failed = results.Where(result => !result.IsReachable).ToArray();
+                var reachableIds = results.Where(result => result.IsReachable)
+                    .Select(result => result.ServiceId)
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+                var reachable = selected.Where(item => reachableIds.Contains(item.Profile.Id))
+                    .ToArray();
+                reachableCount = reachable.Length;
+
+                if (reachable.Length == 0 && selectedAntiDpi.Length == 0)
+                {
+                    VerificationState = VerificationState.Unavailable;
+                    OperationMessage =
+                        "Не удалось применить записи: ни один выбранный сервис не прошёл проверку.";
+                    return;
+                }
+
+                var resultById = results.ToDictionary(
+                    result => result.ServiceId,
+                    StringComparer.OrdinalIgnoreCase);
+                effectiveModules = reachable
+                    .Select(item => BuildEffectiveModule(item, resultById[item.Profile.Id]))
+                    .ToArray();
             }
 
-            var resultById = results.ToDictionary(
-                result => result.ServiceId,
-                StringComparer.OrdinalIgnoreCase);
-            _hostsService.Apply(reachable.Select(item =>
-                BuildEffectiveModule(item, resultById[item.Profile.Id])));
-            DnsCacheService.Flush();
             _settingsService.Save(
                 selected.Select(item => item.Module.Id),
                 IsGoodbyeDpiInstalled
                     ? selectedAntiDpi.Select(item => item.Id)
                     : []);
             var engineMessage = await SyncGoodbyeDpiAsync(selectedAntiDpi);
-            OperationMessage = failed.Length == 0
-                ? $"Все выбранные сервисы доступны: {reachable.Length} из {selected.Length}."
-                : $"Записи применены. Доступно сервисов: {reachable.Length} из {selected.Length}.";
+            ApplyManagedModules(
+                effectiveModules,
+                _lastAntiDpiOptimizationResult?.Addresses);
+            DnsCacheService.Flush();
+
+            OperationMessage = selected.Length == 0
+                ? selectedAntiDpi.Length == 0
+                    ? "Нет выбранных сервисов."
+                    : engineMessage
+                : failed.Length == 0
+                    ? $"Все выбранные сервисы доступны: {reachableCount} из {selected.Length}."
+                    : $"Записи применены. Доступно сервисов: {reachableCount} из {selected.Length}.";
             if (!string.IsNullOrWhiteSpace(engineMessage))
-                OperationMessage += $" {engineMessage}";
+            {
+                if (!OperationMessage.Contains(engineMessage, StringComparison.Ordinal))
+                    OperationMessage += $" {engineMessage}";
+            }
             RefreshState();
         }
         catch (Exception exception)
@@ -781,6 +804,7 @@ public sealed class MainViewModel : ObservableObject
     {
         if (!IsGoodbyeDpiInstalled)
         {
+            _lastAntiDpiOptimizationResult = null;
             IsGoodbyeDpiRuntimeEnabled = false;
             return selectedAntiDpi.Count == 0
                 ? string.Empty
@@ -789,20 +813,56 @@ public sealed class MainViewModel : ObservableObject
 
         if (selectedAntiDpi.Count == 0)
         {
+            _lastAntiDpiOptimizationResult = null;
             var stopped = await _goodbyeDpiRuntimeService.DisableAsync();
             IsGoodbyeDpiRuntimeEnabled = false;
             EngineOperationMessage = stopped.Message;
             return "Anti-DPI сервисы не выбраны, GoodbyeDPI выключен.";
         }
 
-        var progress = new Progress<string>(message => EngineOperationMessage = message);
+        AddEngineActivity("Начинаем подбор стратегии и edge-IP.");
+        var progress = new Progress<string>(message =>
+        {
+            EngineOperationMessage = message;
+            AddEngineActivity(message);
+        });
         var optimized = await _goodbyeDpiStrategyOptimizer.EnableBestAsync(
             selectedAntiDpi.Select(item => item.Id),
             progress);
+        _lastAntiDpiOptimizationResult = optimized;
         IsGoodbyeDpiRuntimeEnabled = optimized.IsSuccessful;
         EngineOperationMessage = optimized.Message;
+        AddEngineActivity(optimized.Message);
         return optimized.Message;
     }
+
+    private void ApplyManagedModules(
+        IEnumerable<ServiceModule> regularModules,
+        IReadOnlyDictionary<string, string>? antiDpiAddresses)
+    {
+        var modules = regularModules.ToList();
+        if (antiDpiAddresses is not null && antiDpiAddresses.Count > 0)
+            modules.Add(BuildAntiDpiHostsModule(antiDpiAddresses));
+
+        if (modules.Count > 0)
+        {
+            _hostsService.Apply(modules);
+        }
+        else if (_hostsService.GetState([]) != HostsState.Inactive)
+        {
+            _hostsService.Disable();
+        }
+    }
+
+    private static ServiceModule BuildAntiDpiHostsModule(
+        IReadOnlyDictionary<string, string> addresses) =>
+        new(
+            "anti-dpi-routing",
+            "Anti-DPI маршрутизация",
+            "Anti-DPI",
+            false,
+            GoodbyeDpiRuntimeService.BuildHostsEntries(addresses),
+            "generated");
 
     private async Task DisableGoodbyeDpiAsync()
     {
@@ -990,7 +1050,7 @@ public sealed class MainViewModel : ObservableObject
     {
         var snapshot = _diagnosticStore.Load();
         if (snapshot is null)
-            return selected.Select(item => item.Module);
+            return WithStoredAntiDpiModule(selected.Select(item => item.Module));
 
         var selectedIds = selected.Select(item => item.Profile.Id)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -998,13 +1058,30 @@ public sealed class MainViewModel : ObservableObject
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         if (!selectedIds.SetEquals(resultIds))
-            return selected.Select(item => item.Module);
+            return WithStoredAntiDpiModule(selected.Select(item => item.Module));
 
         var resultById = snapshot.Services
             .Where(result => result.IsReachable)
             .ToDictionary(result => result.ServiceId, StringComparer.OrdinalIgnoreCase);
-        return selected.Where(item => resultById.ContainsKey(item.Profile.Id))
-            .Select(item => BuildEffectiveModule(item, resultById[item.Profile.Id]));
+        return WithStoredAntiDpiModule(
+            selected.Where(item => resultById.ContainsKey(item.Profile.Id))
+                .Select(item => BuildEffectiveModule(item, resultById[item.Profile.Id])));
+    }
+
+    private IEnumerable<ServiceModule> WithStoredAntiDpiModule(
+        IEnumerable<ServiceModule> regularModules)
+    {
+        var modules = regularModules.ToList();
+        var selection = _antiDpiStrategySelectionStore.Load();
+        var selectedAntiDpiIds = AntiDpiServices
+            .Where(item => item.IsSelected)
+            .Select(item => item.Id)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (selection?.Addresses is { Count: > 0 }
+            && selection.ServiceIds.ToHashSet(StringComparer.OrdinalIgnoreCase)
+                .SetEquals(selectedAntiDpiIds))
+            modules.Add(BuildAntiDpiHostsModule(selection.Addresses));
+        return modules;
     }
 
     private static ServiceModule BuildEffectiveModule(
@@ -1096,6 +1173,23 @@ public sealed class MainViewModel : ObservableObject
         CleanupTitle = string.Empty;
         CleanupItems.Clear();
         OnPropertyChanged(nameof(HasCleanupItems));
+    }
+
+    private void ClearEngineActivityLog()
+    {
+        EngineActivityLog.Clear();
+        OnPropertyChanged(nameof(HasEngineActivityLog));
+    }
+
+    private void AddEngineActivity(string message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+            return;
+
+        EngineActivityLog.Add($"{DateTime.Now:HH:mm:ss}  {message}");
+        while (EngineActivityLog.Count > 9)
+            EngineActivityLog.RemoveAt(0);
+        OnPropertyChanged(nameof(HasEngineActivityLog));
     }
 
     private void SetCleanupReport(

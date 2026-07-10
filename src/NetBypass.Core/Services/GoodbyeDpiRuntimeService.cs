@@ -146,6 +146,17 @@ public sealed class GoodbyeDpiRuntimeService
             .Order(StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
+    public static IReadOnlyList<HostEntry> BuildHostsEntries(
+        IReadOnlyDictionary<string, string> addressesByService) =>
+        addressesByService
+            .Where(pair => DomainsByService.ContainsKey(pair.Key))
+            .SelectMany(pair => DomainsByService[pair.Key]
+                .Select(domain => new HostEntry(pair.Value, domain)))
+            .GroupBy(entry => entry.Hostname, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .OrderBy(entry => entry.Hostname, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
     public static IReadOnlyList<string> BuildArguments(string blacklistPath) =>
     [
         "-5",

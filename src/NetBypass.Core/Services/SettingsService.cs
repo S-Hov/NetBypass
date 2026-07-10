@@ -4,7 +4,8 @@ namespace NetBypass.Core.Services;
 
 public sealed record AppSettings(
     HashSet<string>? SelectedModuleIds,
-    HashSet<string>? SelectedAntiDpiServiceIds = null);
+    HashSet<string>? SelectedAntiDpiServiceIds = null,
+    bool StartWithWindows = false);
 
 public sealed class SettingsService
 {
@@ -35,12 +36,15 @@ public sealed class SettingsService
 
     public void Save(
         IEnumerable<string> selectedIds,
-        IEnumerable<string>? selectedAntiDpiServiceIds = null)
+        IEnumerable<string>? selectedAntiDpiServiceIds = null,
+        bool? startWithWindows = null)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
+        var effectiveStartWithWindows = startWithWindows ?? Load()?.StartWithWindows ?? false;
         var settings = new AppSettings(
             selectedIds.ToHashSet(StringComparer.OrdinalIgnoreCase),
-            selectedAntiDpiServiceIds?.ToHashSet(StringComparer.OrdinalIgnoreCase));
+            selectedAntiDpiServiceIds?.ToHashSet(StringComparer.OrdinalIgnoreCase),
+            effectiveStartWithWindows);
         File.WriteAllText(_path, JsonSerializer.Serialize(settings, JsonOptions));
     }
 }

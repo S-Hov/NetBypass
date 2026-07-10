@@ -25,6 +25,9 @@ public sealed class MainViewModel : ObservableObject
     private readonly SettingsService _settingsService = new();
     private readonly DiagnosticStore _diagnosticStore = new();
     private readonly EndpointSelectionStore _endpointSelectionStore = new();
+    private readonly GoodbyeDpiInstallService _goodbyeDpiInstallService = new();
+    private readonly GoodbyeDpiRuntimeService _goodbyeDpiRuntimeService;
+    private readonly StartupTaskService _startupTaskService = new();
     private readonly NetworkDiagnosticService _diagnosticService = new(
         new CloudflareGoogleDohResolver(),
         new EndpointProbe());
@@ -38,13 +41,23 @@ public sealed class MainViewModel : ObservableObject
     private int _diagnosticTotal;
     private string _currentDiagnosticService = string.Empty;
     private string _cleanupTitle = string.Empty;
+    private bool _isGoodbyeDpiInstalled;
+    private bool _isGoodbyeDpiRuntimeEnabled;
+    private string _engineOperationMessage = string.Empty;
+    private bool _startWithWindows;
+    private bool _isStartupSettingBusy;
+    private string _startupOperationMessage = string.Empty;
     private HashSet<string> _unavailableServiceIds = new(StringComparer.OrdinalIgnoreCase);
 
     public MainViewModel()
     {
+        _goodbyeDpiRuntimeService = new GoodbyeDpiRuntimeService(_goodbyeDpiInstallService);
         var modulesPath = Path.Combine(AppContext.BaseDirectory, "Modules");
         var profiles = new ServiceProfileLoader().LoadDirectory(modulesPath);
         var settings = _settingsService.Load();
+        _isGoodbyeDpiInstalled = _goodbyeDpiInstallService.IsInstalled();
+        _isGoodbyeDpiRuntimeEnabled = _goodbyeDpiRuntimeService.IsEnabled();
+        _startWithWindows = settings?.StartWithWindows ?? false;
 
         Services = new ObservableCollection<ServiceItemViewModel>(
             profiles.Select(profile => new ServiceItemViewModel(
@@ -64,7 +77,7 @@ public sealed class MainViewModel : ObservableObject
             new PropertyGroupDescription(nameof(ServiceItemViewModel.Category)));
 
         Diagnostics = new ObservableCollection<DiagnosticItemViewModel>();
-        Engines = new ObservableCollection<EngineCardViewModel>(CreateEngineCards());
+        Engines = new ObservableCollection<EngineCardViewModel>(CreateEngineCards(IsGoodbyeDpiInstalled));
         CleanupItems = new ObservableCollection<string>();
         LoadStoredDiagnostics();
 
@@ -88,6 +101,10 @@ public sealed class MainViewModel : ObservableObject
         ShowServicesCommand = new RelayCommand(() => CurrentPage = AppPage.Services);
         ShowEnginesCommand = new RelayCommand(() => CurrentPage = AppPage.Engines);
         ShowDiagnosticsCommand = new RelayCommand(() => CurrentPage = AppPage.Diagnostics);
+        ShowSettingsCommand = new RelayCommand(() => CurrentPage = AppPage.Settings);
+        DownloadGoodbyeDpiCommand = new AsyncRelayCommand(
+            DownloadGoodbyeDpiAsync,
+            () => !IsBusy && !IsGoodbyeDpiInstalled);
 
         RefreshState();
     }
@@ -108,6 +125,8 @@ public sealed class MainViewModel : ObservableObject
     public RelayCommand ShowServicesCommand { get; }
     public RelayCommand ShowEnginesCommand { get; }
     public RelayCommand ShowDiagnosticsCommand { get; }
+    public RelayCommand ShowSettingsCommand { get; }
+    public AsyncRelayCommand DownloadGoodbyeDpiCommand { get; }
 
     public HostsState HostsState
     {
@@ -145,6 +164,7 @@ public sealed class MainViewModel : ObservableObject
             OnPropertyChanged(nameof(IsServicesPage));
             OnPropertyChanged(nameof(IsEnginesPage));
             OnPropertyChanged(nameof(IsDiagnosticsPage));
+            OnPropertyChanged(nameof(IsSettingsPage));
         }
     }
 
@@ -159,6 +179,7 @@ public sealed class MainViewModel : ObservableObject
             RaiseStateProperties();
             OnPropertyChanged(nameof(HasDiagnosticProgress));
             OnPropertyChanged(nameof(DiagnosticButtonText));
+            DownloadGoodbyeDpiCommand?.RaiseCanExecuteChanged();
         }
     }
 
@@ -182,7 +203,10 @@ public sealed class MainViewModel : ObservableObject
     public bool IsServicesPage => CurrentPage == AppPage.Services;
     public bool IsEnginesPage => CurrentPage == AppPage.Engines;
     public bool IsDiagnosticsPage => CurrentPage == AppPage.Diagnostics;
-    public bool IsPowerOn => HostsState is HostsState.Active or HostsState.ChangesPending;
+    public bool IsSettingsPage => CurrentPage == AppPage.Settings;
+    public bool IsPowerOn =>
+        HostsState is HostsState.Active or HostsState.ChangesPending
+        || IsGoodbyeDpiRuntimeEnabled;
     public bool IsCorrupted => HostsState == HostsState.Corrupted;
     public bool IsConnecting => PowerOperation == PowerOperation.Connecting;
     public bool IsDisconnecting => PowerOperation == PowerOperation.Disconnecting;
@@ -197,13 +221,103 @@ public sealed class MainViewModel : ObservableObject
     }
     public bool HasPartialAvailability =>
         HasAvailabilitySummary && AvailableServiceCount < SelectedServiceCount;
+    public bool IsGoodbyeDpiInstalled
+    {
+        get => _isGoodbyeDpiInstalled;
+        private set
+        {
+            if (!SetProperty(ref _isGoodbyeDpiInstalled, value))
+                return;
+
+            OnPropertyChanged(nameof(IsAntiDpiServicesEnabled));
+            OnPropertyChanged(nameof(IsAntiDpiEngineMissing));
+            OnPropertyChanged(nameof(AntiDpiInstallStatus));
+            OnPropertyChanged(nameof(GoodbyeDpiRuntimeStatus));
+            OnPropertyChanged(nameof(AntiDpiSelectionSummary));
+            OnPropertyChanged(nameof(HasSelectedBypassTarget));
+            DownloadGoodbyeDpiCommand?.RaiseCanExecuteChanged();
+            RebuildEngineCards();
+        }
+    }
+    public bool IsGoodbyeDpiRuntimeEnabled
+    {
+        get => _isGoodbyeDpiRuntimeEnabled;
+        private set
+        {
+            if (!SetProperty(ref _isGoodbyeDpiRuntimeEnabled, value))
+                return;
+
+            OnPropertyChanged(nameof(IsPowerOn));
+            OnPropertyChanged(nameof(GoodbyeDpiRuntimeStatus));
+            OnPropertyChanged(nameof(PowerButtonLabel));
+            RaiseStateProperties();
+        }
+    }
+    public bool IsAntiDpiServicesEnabled => IsGoodbyeDpiInstalled;
+    public bool IsAntiDpiEngineMissing => !IsGoodbyeDpiInstalled;
+    public string AntiDpiInstallStatus => IsGoodbyeDpiInstalled
+        ? "GoodbyeDPI скачан. Эти сервисы могут автоматически включать Anti-DPI режим."
+        : "Чтобы включить эти сервисы, скачайте хотя бы один Anti-DPI движок.";
+    public string GoodbyeDpiRuntimeStatus => !IsGoodbyeDpiInstalled
+        ? "GoodbyeDPI ещё не скачан."
+        : IsGoodbyeDpiRuntimeEnabled
+            ? "GoodbyeDPI сейчас работает."
+            : "GoodbyeDPI скачан, но фоновый режим сейчас выключен.";
     public bool HasSelectedBypassTarget =>
         Services.Any(item => item.IsSelected)
-        || AntiDpiServices.Any(item => item.IsSelected);
+        || (IsGoodbyeDpiInstalled && AntiDpiServices.Any(item => item.IsSelected));
     public string AntiDpiSelectionSummary =>
+        !IsGoodbyeDpiInstalled
+            ? "Anti-DPI блок пока неактивен."
+            :
         AntiDpiServices.Count(item => item.IsSelected) == 0
             ? "GoodbyeDPI не будет запускаться автоматически для этих сервисов."
             : $"Anti-DPI сервисов выбрано: {AntiDpiServices.Count(item => item.IsSelected)}.";
+    public string EngineOperationMessage
+    {
+        get => _engineOperationMessage;
+        private set
+        {
+            if (SetProperty(ref _engineOperationMessage, value))
+                OnPropertyChanged(nameof(HasEngineOperationMessage));
+        }
+    }
+    public bool HasEngineOperationMessage => !string.IsNullOrWhiteSpace(EngineOperationMessage);
+    public bool StartWithWindows
+    {
+        get => _startWithWindows;
+        set
+        {
+            if (!SetProperty(ref _startWithWindows, value))
+                return;
+
+            OnPropertyChanged(nameof(StartupStatus));
+            _ = UpdateStartupSettingAsync(value);
+        }
+    }
+    public bool IsStartupSettingBusy
+    {
+        get => _isStartupSettingBusy;
+        private set
+        {
+            if (SetProperty(ref _isStartupSettingBusy, value))
+                OnPropertyChanged(nameof(IsStartupSettingAvailable));
+        }
+    }
+    public bool IsStartupSettingAvailable => !IsStartupSettingBusy;
+    public string StartupOperationMessage
+    {
+        get => _startupOperationMessage;
+        private set
+        {
+            if (SetProperty(ref _startupOperationMessage, value))
+                OnPropertyChanged(nameof(HasStartupOperationMessage));
+        }
+    }
+    public bool HasStartupOperationMessage => !string.IsNullOrWhiteSpace(StartupOperationMessage);
+    public string StartupStatus => StartWithWindows
+        ? "Включён: после входа в Windows NetBypass незаметно восстановит выбранные движки."
+        : "Выключен: после перезагрузки внешние движки нужно будет включить вручную.";
     public int SelectedServiceCount => Services.Count(item => item.IsSelected);
     public int AvailableServiceCount
     {
@@ -278,10 +392,11 @@ public sealed class MainViewModel : ObservableObject
         PowerOperation.Disconnecting => "Отключение...",
         _ => IsBusy
         ? "Проверка..."
+        : IsPowerOn
+        ? "Отключить"
         : HostsState switch
         {
             HostsState.Inactive => "Включить",
-            HostsState.Active or HostsState.ChangesPending => "Отключить",
             _ => "Недоступно"
         }
     };
@@ -350,6 +465,9 @@ public sealed class MainViewModel : ObservableObject
             if (HostsState == HostsState.Corrupted)
                 return UiState.Corrupted;
 
+            if (IsGoodbyeDpiRuntimeEnabled && HostsState == HostsState.Inactive)
+                return UiState.ActiveUnverified;
+
             if (HostsState == HostsState.Inactive)
                 return UiState.Disabled;
 
@@ -389,6 +507,81 @@ public sealed class MainViewModel : ObservableObject
 
     public bool HasOperationMessage => !string.IsNullOrWhiteSpace(OperationMessage);
 
+    private async Task DownloadGoodbyeDpiAsync()
+    {
+        IsBusy = true;
+        EngineOperationMessage = "Скачиваем GoodbyeDPI...";
+        try
+        {
+            var result = await _goodbyeDpiInstallService.InstallAsync();
+            IsGoodbyeDpiInstalled = result.IsInstalled;
+            EngineOperationMessage = result.Message;
+            OperationMessage = result.IsInstalled
+                ? "GoodbyeDPI скачан. Anti-DPI блок в сервисах активирован."
+                : result.Message;
+        }
+        catch (Exception exception)
+        {
+            EngineOperationMessage = ToUserMessage("Не удалось скачать GoodbyeDPI", exception);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    public async Task RestoreBackgroundStateAsync()
+    {
+        var selectedAntiDpi = AntiDpiServices
+            .Where(item => item.IsSelected)
+            .ToArray();
+
+        if (IsGoodbyeDpiInstalled && selectedAntiDpi.Length > 0)
+            await SyncGoodbyeDpiAsync(selectedAntiDpi);
+    }
+
+    private async Task UpdateStartupSettingAsync(bool enabled)
+    {
+        if (IsStartupSettingBusy)
+            return;
+
+        IsStartupSettingBusy = true;
+        StartupOperationMessage = enabled
+            ? "Включаем автозапуск..."
+            : "Выключаем автозапуск...";
+        try
+        {
+            var executablePath = Environment.ProcessPath ?? string.Empty;
+            var result = await _startupTaskService.SetEnabledAsync(enabled, executablePath);
+            StartupOperationMessage = result.Message;
+            if (!result.IsSuccess)
+            {
+                _startWithWindows = !enabled;
+                OnPropertyChanged(nameof(StartWithWindows));
+                OnPropertyChanged(nameof(StartupStatus));
+                return;
+            }
+
+            _settingsService.Save(
+                Services.Where(item => item.IsSelected).Select(item => item.Module.Id),
+                IsGoodbyeDpiInstalled
+                    ? AntiDpiServices.Where(item => item.IsSelected).Select(item => item.Id)
+                    : [],
+                enabled);
+        }
+        catch (Exception exception)
+        {
+            _startWithWindows = !enabled;
+            OnPropertyChanged(nameof(StartWithWindows));
+            OnPropertyChanged(nameof(StartupStatus));
+            StartupOperationMessage = ToUserMessage("Не удалось изменить автозапуск", exception);
+        }
+        finally
+        {
+            IsStartupSettingBusy = false;
+        }
+    }
+
     public void RestoreConfirmed()
     {
         RunSafely(() =>
@@ -414,6 +607,7 @@ public sealed class MainViewModel : ObservableObject
             {
                 ClearCleanupReport();
                 _hostsService.Disable();
+                await DisableGoodbyeDpiAsync();
                 DnsCacheService.Flush();
                 var cleanup = _hostsService.VerifyCleanup(Services.Select(item => item.Module));
                 SetCleanupReport("Отключение выполнено", cleanup, dnsFlushed: true);
@@ -455,10 +649,13 @@ public sealed class MainViewModel : ObservableObject
         {
             _settingsService.Save(
                 [],
-                selectedAntiDpi.Select(item => item.Id));
+                IsGoodbyeDpiInstalled
+                    ? selectedAntiDpi.Select(item => item.Id)
+                    : []);
+            var engineMessage = await SyncGoodbyeDpiAsync(selectedAntiDpi);
             OperationMessage = selectedAntiDpi.Length == 0
                 ? "Нет выбранных сервисов."
-                : "Выбор Anti-DPI сервисов сохранён. Адаптер GoodbyeDPI подключим следующим шагом.";
+                : engineMessage;
             RefreshState();
             return;
         }
@@ -494,10 +691,15 @@ public sealed class MainViewModel : ObservableObject
             DnsCacheService.Flush();
             _settingsService.Save(
                 selected.Select(item => item.Module.Id),
-                selectedAntiDpi.Select(item => item.Id));
+                IsGoodbyeDpiInstalled
+                    ? selectedAntiDpi.Select(item => item.Id)
+                    : []);
+            var engineMessage = await SyncGoodbyeDpiAsync(selectedAntiDpi);
             OperationMessage = failed.Length == 0
                 ? $"Все выбранные сервисы доступны: {reachable.Length} из {selected.Length}."
                 : $"Записи применены. Доступно сервисов: {reachable.Length} из {selected.Length}.";
+            if (!string.IsNullOrWhiteSpace(engineMessage))
+                OperationMessage += $" {engineMessage}";
             RefreshState();
         }
         catch (Exception exception)
@@ -563,6 +765,39 @@ public sealed class MainViewModel : ObservableObject
         OperationMessage =
             $"Недоступные сервисы исключены. Проверяем оставшиеся: {remaining}.";
         await ApplySelectedServicesAsync();
+    }
+
+    private async Task<string> SyncGoodbyeDpiAsync(
+        IReadOnlyCollection<AntiDpiServiceItemViewModel> selectedAntiDpi)
+    {
+        if (!IsGoodbyeDpiInstalled)
+        {
+            IsGoodbyeDpiRuntimeEnabled = false;
+            return selectedAntiDpi.Count == 0
+                ? string.Empty
+                : "GoodbyeDPI ещё не скачан.";
+        }
+
+        if (selectedAntiDpi.Count == 0)
+        {
+            var stopped = await _goodbyeDpiRuntimeService.DisableAsync();
+            IsGoodbyeDpiRuntimeEnabled = false;
+            EngineOperationMessage = stopped.Message;
+            return "Anti-DPI сервисы не выбраны, GoodbyeDPI выключен.";
+        }
+
+        var started = await _goodbyeDpiRuntimeService.EnableAsync(
+            selectedAntiDpi.Select(item => item.Id));
+        IsGoodbyeDpiRuntimeEnabled = started.IsStarted;
+        EngineOperationMessage = started.Message;
+        return started.Message;
+    }
+
+    private async Task DisableGoodbyeDpiAsync()
+    {
+        var stopped = await _goodbyeDpiRuntimeService.DisableAsync();
+        IsGoodbyeDpiRuntimeEnabled = false;
+        EngineOperationMessage = stopped.Message;
     }
 
     private async Task<IReadOnlyList<ServiceDiagnosticResult>> DiagnoseWithProgressAsync(
@@ -662,16 +897,19 @@ public sealed class MainViewModel : ObservableObject
         ];
     }
 
-    private static IReadOnlyList<EngineCardViewModel> CreateEngineCards() =>
+    private IReadOnlyList<EngineCardViewModel> CreateEngineCards(bool isGoodbyeDpiInstalled) =>
     [
         new EngineCardViewModel(
             "GoodbyeDPI",
             BypassEngineKind.AntiDpi,
-            "Первый к интеграции",
-            true,
+            isGoodbyeDpiInstalled ? "Скачан" : "Нужно скачать",
+            isGoodbyeDpiInstalled,
             ["YouTube", "Discord", "сервисы с DPI-блокировкой"],
-            "Windows-движок для обхода DPI. NetBypass будет запускать его как внешний процесс, создавать профиль доменов и проверять результат после старта.",
-            "Следующий шаг: адаптер, выбор папки с goodbyedpi.exe, запуск базового профиля и безопасная остановка."),
+            "Windows-движок для обхода DPI. NetBypass будет запускать его как внешний процесс и проверять результат после старта.",
+            isGoodbyeDpiInstalled
+                ? "Следующий шаг: запуск базового профиля и безопасная остановка."
+                : "Сначала скачиваем официальный архив GoodbyeDPI и сохраняем его в папку пользователя.",
+            showDownloadButton: !isGoodbyeDpiInstalled),
         new EngineCardViewModel(
             "zapret / zapret2",
             BypassEngineKind.AntiDpi,
@@ -689,6 +927,13 @@ public sealed class MainViewModel : ObservableObject
             "Альтернативный внешний движок. Его удобно держать как запасной вариант, когда появится общий интерфейс адаптеров.",
             "Пока неактивно: добавим после первого рабочего Anti-DPI адаптера.")
     ];
+
+    private void RebuildEngineCards()
+    {
+        Engines.Clear();
+        foreach (var engine in CreateEngineCards(IsGoodbyeDpiInstalled))
+            Engines.Add(engine);
+    }
 
     private void SetAll(bool value)
     {
@@ -819,6 +1064,7 @@ public sealed class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(HasPartialAvailability));
         OnPropertyChanged(nameof(HasSelectedBypassTarget));
         OnPropertyChanged(nameof(AntiDpiSelectionSummary));
+        OnPropertyChanged(nameof(AntiDpiInstallStatus));
     }
 
     private void RunSafely(Action action)
@@ -885,7 +1131,8 @@ public enum AppPage
     Home,
     Services,
     Engines,
-    Diagnostics
+    Diagnostics,
+    Settings
 }
 
 public enum VerificationState

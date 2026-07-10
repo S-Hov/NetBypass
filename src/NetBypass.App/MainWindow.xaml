@@ -308,6 +308,24 @@
                             <TextBlock Text="Диагностика" FontSize="14"/>
                         </StackPanel>
                     </Button>
+
+                    <Button Command="{Binding ShowSettingsCommand}">
+                        <Button.Style>
+                            <Style TargetType="Button"
+                                   BasedOn="{StaticResource NavigationButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsSettingsPage}" Value="True">
+                                        <Setter Property="Background" Value="#29253D"/>
+                                        <Setter Property="Foreground" Value="#C8BCFF"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="⚙" FontSize="17" Width="28"/>
+                            <TextBlock Text="Настройки" FontSize="14"/>
+                        </StackPanel>
+                    </Button>
                 </StackPanel>
 
                 <StackPanel Grid.Row="3">
@@ -486,62 +504,99 @@
                             BorderThickness="1"
                             Margin="0,0,0,14">
                         <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="1.1*"/>
-                                <ColumnDefinition Width="1.4*"/>
-                            </Grid.ColumnDefinitions>
+                            <Grid IsEnabled="{Binding IsAntiDpiServicesEnabled}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="1.1*"/>
+                                    <ColumnDefinition Width="1.4*"/>
+                                </Grid.ColumnDefinitions>
 
-                            <StackPanel Margin="0,0,22,0">
-                                <TextBlock Text="Обход с использованием Anti-DPI"
-                                           FontSize="18"
-                                           FontWeight="SemiBold"/>
-                                <TextBlock Text="Эти сервисы будут запускаться через GoodbyeDPI, когда подключим адаптер. Сейчас сохраняем выбор."
-                                           Margin="0,6,0,0"
-                                           TextWrapping="Wrap"
-                                           Foreground="#9DA1B1"/>
-                                <TextBlock Text="{Binding AntiDpiSelectionSummary}"
-                                           Margin="0,12,0,0"
-                                           Foreground="#AFA0FF"
-                                           FontWeight="SemiBold"/>
-                            </StackPanel>
+                                <StackPanel Margin="0,0,22,0">
+                                    <TextBlock Text="Обход с использованием Anti-DPI"
+                                               FontSize="18"
+                                               FontWeight="SemiBold"/>
+                                    <TextBlock Text="{Binding AntiDpiInstallStatus}"
+                                               Margin="0,6,0,0"
+                                               TextWrapping="Wrap"
+                                               Foreground="#9DA1B1"/>
+                                    <TextBlock Text="{Binding AntiDpiSelectionSummary}"
+                                               Margin="0,12,0,0"
+                                               Foreground="#AFA0FF"
+                                               FontWeight="SemiBold"/>
+                                    <TextBlock Text="{Binding GoodbyeDpiRuntimeStatus}"
+                                               Margin="0,7,0,0"
+                                               TextWrapping="Wrap"
+                                               Foreground="#777C8D"/>
+                                </StackPanel>
 
-                            <ItemsControl Grid.Column="1"
-                                          ItemsSource="{Binding AntiDpiServices}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border Padding="12"
-                                                Margin="0,0,0,8"
-                                                CornerRadius="10"
-                                                Background="#20232D">
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                </Grid.ColumnDefinitions>
-                                                <StackPanel Margin="0,0,16,0">
-                                                    <TextBlock Text="{Binding Name}"
-                                                               FontSize="15"
-                                                               FontWeight="SemiBold"/>
-                                                    <TextBlock Text="{Binding Description}"
-                                                               Margin="0,4,0,0"
-                                                               TextWrapping="Wrap"
-                                                               Foreground="#9095A6"
-                                                               FontSize="12"/>
-                                                    <TextBlock Text="{Binding EngineName}"
-                                                               Margin="0,7,0,0"
-                                                               Foreground="#61D6A3"
-                                                               FontSize="12"
-                                                               FontWeight="SemiBold"/>
-                                                </StackPanel>
-                                                <CheckBox Grid.Column="1"
-                                                          IsChecked="{Binding IsSelected, Mode=TwoWay}"
-                                                          VerticalAlignment="Center"
-                                                          ToolTip="Включить будущий запуск через GoodbyeDPI"/>
-                                            </Grid>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
+                                <ItemsControl Grid.Column="1"
+                                              ItemsSource="{Binding AntiDpiServices}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Padding="12"
+                                                    Margin="0,0,0,8"
+                                                    CornerRadius="10"
+                                                    Background="#20232D">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel Margin="0,0,16,0">
+                                                        <TextBlock Text="{Binding Name}"
+                                                                   FontSize="15"
+                                                                   FontWeight="SemiBold"/>
+                                                        <TextBlock Text="{Binding Description}"
+                                                                   Margin="0,4,0,0"
+                                                                   TextWrapping="Wrap"
+                                                                   Foreground="#9095A6"
+                                                                   FontSize="12"/>
+                                                        <TextBlock Text="{Binding EngineName}"
+                                                                   Margin="0,7,0,0"
+                                                                   Foreground="#61D6A3"
+                                                                   FontSize="12"
+                                                                   FontWeight="SemiBold"/>
+                                                    </StackPanel>
+                                                    <CheckBox Grid.Column="1"
+                                                              IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                              VerticalAlignment="Center"
+                                                              ToolTip="Включить будущий запуск через GoodbyeDPI"/>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </Grid>
+
+                            <Border Padding="16"
+                                    CornerRadius="10"
+                                    Background="#EE181A22"
+                                    BorderBrush="#3A3F4F"
+                                    BorderThickness="1"
+                                    Visibility="{Binding IsAntiDpiEngineMissing, Converter={StaticResource BooleanToVisibility}}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Margin="0,0,18,0">
+                                        <TextBlock Text="Для обхода скачайте хотя бы один Anti-DPI движок"
+                                                   FontSize="17"
+                                                   FontWeight="SemiBold"/>
+                                        <TextBlock Text="Сейчас доступен GoodbyeDPI. После скачивания YouTube и Discord станут активны в этом блоке."
+                                                   Margin="0,6,0,0"
+                                                   TextWrapping="Wrap"
+                                                   Foreground="#B8BBC7"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1"
+                                            Content="Открыть движки"
+                                            Command="{Binding ShowEnginesCommand}"
+                                            Style="{StaticResource PrimaryButton}"
+                                            MinWidth="150"
+                                            Height="40"
+                                            Padding="16,0"
+                                            VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
                         </Grid>
                     </Border>
 
@@ -838,6 +893,17 @@
                                            Margin="0,6,0,0"
                                            TextWrapping="Wrap"
                                            Foreground="#A5A9B8"/>
+                                <TextBlock Text="{Binding GoodbyeDpiRuntimeStatus}"
+                                           Margin="0,10,0,0"
+                                           TextWrapping="Wrap"
+                                           Foreground="#61D6A3"
+                                           FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding EngineOperationMessage}"
+                                           Margin="0,10,0,0"
+                                           TextWrapping="Wrap"
+                                           Foreground="#AFA0FF"
+                                           FontWeight="SemiBold"
+                                           Visibility="{Binding HasEngineOperationMessage, Converter={StaticResource BooleanToVisibility}}"/>
                             </StackPanel>
                         </Border>
 
@@ -881,6 +947,15 @@
                                                            Margin="0,12,0,0"
                                                            TextWrapping="Wrap"
                                                            Foreground="#8F94A5"/>
+                                                <Button Content="Скачать"
+                                                        Command="{Binding DataContext.DownloadGoodbyeDpiCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                        Style="{StaticResource PrimaryButton}"
+                                                        MinWidth="120"
+                                                        Height="38"
+                                                        Padding="16,0"
+                                                        Margin="0,14,0,0"
+                                                        HorizontalAlignment="Left"
+                                                        Visibility="{Binding ShowDownloadButton, Converter={StaticResource BooleanToVisibility}}"/>
                                             </StackPanel>
                                             <Border Grid.Column="1"
                                                     Padding="10,6"
@@ -897,6 +972,68 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                     </StackPanel>
+                </ScrollViewer>
+            </Grid>
+
+            <Grid Visibility="{Binding IsSettingsPage, Converter={StaticResource BooleanToVisibility}}"
+                  Margin="36,30,36,26">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <StackPanel>
+                    <TextBlock Text="Настройки"
+                               FontSize="28"
+                               FontWeight="Bold"/>
+                    <TextBlock Text="Поведение NetBypass и фоновых движков"
+                               Margin="0,6,0,0"
+                               Foreground="#9095A6"/>
+                </StackPanel>
+
+                <ScrollViewer Grid.Row="1"
+                              Margin="0,22,0,0"
+                              VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled">
+                    <Border Padding="20"
+                            CornerRadius="12"
+                            Background="#20232D"
+                            BorderBrush="#2A2E3A"
+                            BorderThickness="1"
+                            VerticalAlignment="Top">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Margin="0,0,24,0">
+                                <TextBlock Text="Автозапуск приложения"
+                                           FontSize="18"
+                                           FontWeight="SemiBold"/>
+                                <TextBlock Text="После входа в Windows NetBypass запустится в фоновом режиме, восстановит выбранные Anti-DPI движки и сразу завершится. Окно приложения не появится."
+                                           Margin="0,7,0,0"
+                                           TextWrapping="Wrap"
+                                           Foreground="#A5A9B8"/>
+                                <TextBlock Text="{Binding StartupStatus}"
+                                           Margin="0,12,0,0"
+                                           TextWrapping="Wrap"
+                                           Foreground="#AFA0FF"
+                                           FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding StartupOperationMessage}"
+                                           Margin="0,8,0,0"
+                                           TextWrapping="Wrap"
+                                           Foreground="#8F94A5"
+                                           Visibility="{Binding HasStartupOperationMessage, Converter={StaticResource BooleanToVisibility}}"/>
+                            </StackPanel>
+
+                            <CheckBox Grid.Column="1"
+                                      IsChecked="{Binding StartWithWindows, Mode=TwoWay}"
+                                      IsEnabled="{Binding IsStartupSettingAvailable}"
+                                      VerticalAlignment="Top"
+                                      ToolTip="Запускать NetBypass при входе в Windows"/>
+                        </Grid>
+                    </Border>
                 </ScrollViewer>
             </Grid>
         </Grid>

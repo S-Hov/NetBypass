@@ -3,12 +3,14 @@ using System.Diagnostics;
 using System.Security.Principal;
 using System.Windows;
 using System.Windows.Threading;
+using NetBypass.App.ViewModels;
+using NetBypass.Core.Services;
 
 namespace NetBypass.App;
 
 public partial class App : Application
 {
-    protected override void OnStartup(StartupEventArgs e)
+    protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
         DispatcherUnhandledException += OnDispatcherUnhandledException;
@@ -17,6 +19,25 @@ public partial class App : Application
         {
             RestartAsAdministrator(e.Args);
             Shutdown();
+            return;
+        }
+
+        if (e.Args.Contains(StartupTaskService.BackgroundArgument, StringComparer.OrdinalIgnoreCase))
+        {
+            ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            try
+            {
+                var viewModel = new MainViewModel();
+                await viewModel.RestoreBackgroundStateAsync();
+            }
+            catch (Exception exception)
+            {
+                Debug.WriteLine($"Не удалось восстановить фоновые движки: {exception}");
+            }
+            finally
+            {
+                Shutdown();
+            }
             return;
         }
 

@@ -1,7 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
-using System.Windows.Data;
 using NetBypass.App.Infrastructure;
 using NetBypass.Core.Models;
 using NetBypass.Core.Services;
@@ -84,10 +83,6 @@ public sealed class MainViewModel : ObservableObject
         foreach (var service in AntiDpiServices)
             service.PropertyChanged += OnAntiDpiServicePropertyChanged;
 
-        ServicesView = CollectionViewSource.GetDefaultView(Services);
-        ServicesView.GroupDescriptions.Add(
-            new PropertyGroupDescription(nameof(ServiceItemViewModel.Category)));
-
         Diagnostics = new ObservableCollection<DiagnosticItemViewModel>();
         Engines = new ObservableCollection<EngineCardViewModel>(CreateEngineCards(IsGoodbyeDpiInstalled));
         CleanupItems = new ObservableCollection<string>();
@@ -128,7 +123,6 @@ public sealed class MainViewModel : ObservableObject
     public ObservableCollection<EngineCardViewModel> Engines { get; }
     public ObservableCollection<string> CleanupItems { get; }
     public ObservableCollection<string> EngineActivityLog { get; }
-    public ICollectionView ServicesView { get; }
     public AsyncRelayCommand PowerCommand { get; }
     public AsyncRelayCommand ApplyCommand { get; }
     public AsyncRelayCommand DiagnoseCommand { get; }

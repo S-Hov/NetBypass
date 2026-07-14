@@ -1,13 +1,17 @@
-using System.Windows;
+using Avalonia.Controls;
+using Avalonia.Interactivity;
+using Avalonia.Markup.Xaml;
 using NetBypass.App.ViewModels;
 
 namespace NetBypass.App;
 
 public partial class MainWindow : Window
 {
+    private Border RestoreOverlay => this.FindControl<Border>(nameof(RestoreOverlay))!;
+
     public MainWindow()
     {
-        InitializeComponent();
+        AvaloniaXamlLoader.Load(this);
 
         try
         {
@@ -15,28 +19,26 @@ public partial class MainWindow : Window
         }
         catch (Exception exception)
         {
-            MessageBox.Show(
-                $"Не удалось запустить NetBypass:\n{exception.Message}",
-                "Ошибка запуска",
-                MessageBoxButton.OK,
-                MessageBoxImage.Error);
-            Close();
+            Title = "Ошибка запуска NetBypass";
+            Content = new TextBlock
+            {
+                Text = $"Не удалось запустить NetBypass:\n{exception.Message}",
+                Margin = new Avalonia.Thickness(32),
+                TextWrapping = Avalonia.Media.TextWrapping.Wrap
+            };
         }
     }
 
-    private void RestoreHosts_Click(object sender, RoutedEventArgs e)
+    private void RestoreHosts_Click(object? sender, RoutedEventArgs e) =>
+        RestoreOverlay.IsVisible = true;
+
+    private void CancelRestore_Click(object? sender, RoutedEventArgs e) =>
+        RestoreOverlay.IsVisible = false;
+
+    private void ConfirmRestore_Click(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is not MainViewModel viewModel)
-            return;
-
-        var result = MessageBox.Show(
-            "Удалить все записи, добавленные NetBypass?\n\nОстальные пользовательские записи hosts останутся без изменений.",
-            "Восстановление hosts",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning,
-            MessageBoxResult.No);
-
-        if (result == MessageBoxResult.Yes)
+        RestoreOverlay.IsVisible = false;
+        if (DataContext is MainViewModel viewModel)
             viewModel.RestoreConfirmed();
     }
 }

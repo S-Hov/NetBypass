@@ -1,8 +1,10 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Security.Principal;
-using System.Windows;
-using System.Windows.Threading;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Markup.Xaml;
 using NetBypass.App.ViewModels;
 using NetBypass.Core.Services;
 
@@ -10,60 +12,67 @@ namespace NetBypass.App;
 
 public partial class App : Application
 {
-    protected override async void OnStartup(StartupEventArgs e)
+    public override void Initialize() => AvaloniaXamlLoader.Load(this);
+
+    public override void OnFrameworkInitializationCompleted()
     {
-        base.OnStartup(e);
-        DispatcherUnhandledException += OnDispatcherUnhandledException;
+        if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            base.OnFrameworkInitializationCompleted();
+            return;
+        }
+
+        AppDomain.CurrentDomain.UnhandledException += (_, args) =>
+            Debug.WriteLine($"Unhandled NetBypass exception: {args.ExceptionObject}");
 
         if (!IsAdministrator())
         {
-            RestartAsAdministrator(e.Args);
-            Shutdown();
+            RestartAsAdministrator(desktop.Args ?? []);
+            desktop.Shutdown();
             return;
         }
 
-        if (e.Args.Contains(StartupTaskService.BackgroundArgument, StringComparer.OrdinalIgnoreCase))
+        if ((desktop.Args ?? []).Contains(StartupTaskService.BackgroundArgument, StringComparer.OrdinalIgnoreCase))
         {
-            ShutdownMode = ShutdownMode.OnExplicitShutdown;
-            try
-            {
-                var viewModel = new MainViewModel();
-                await viewModel.RestoreBackgroundStateAsync();
-            }
-            catch (Exception exception)
-            {
-                Debug.WriteLine($"Не удалось восстановить фоновые движки: {exception}");
-            }
-            finally
-            {
-                Shutdown();
-            }
+            _ = RestoreBackgroundStateAsync(desktop);
+            base.OnFrameworkInitializationCompleted();
             return;
         }
 
-        new MainWindow().Show();
+        desktop.MainWindow = new MainWindow();
+        base.OnFrameworkInitializationCompleted();
     }
 
-    private static void OnDispatcherUnhandledException(
-        object sender,
-        DispatcherUnhandledExceptionEventArgs e)
+    private static async Task RestoreBackgroundStateAsync(IClassicDesktopStyleApplicationLifetime desktop)
     {
-        MessageBox.Show(
-            $"NetBypass столкнулся с ошибкой:\n\n{e.Exception.Message}",
-            "Ошибка NetBypass",
-            MessageBoxButton.OK,
-            MessageBoxImage.Error);
-        e.Handled = true;
+        try
+        {
+            await new MainViewModel().RestoreBackgroundStateAsync();
+        }
+        catch (Exception exception)
+        {
+            Debug.WriteLine($"Не удалось восстановить фоновые движки: {exception}");
+        }
+        finally
+        {
+            desktop.Shutdown();
+        }
     }
 
     private static bool IsAdministrator()
     {
+        if (!OperatingSystem.IsWindows())
+            return true;
+
         using var identity = WindowsIdentity.GetCurrent();
         return new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator);
     }
 
     private static void RestartAsAdministrator(IEnumerable<string> arguments)
     {
+        if (!OperatingSystem.IsWindows())
+            return;
+
         var executablePath = Environment.ProcessPath
             ?? throw new InvalidOperationException("Не удалось определить путь к NetBypass.");
 
@@ -80,11 +89,7 @@ public partial class App : Application
         }
         catch (Win32Exception exception) when (exception.NativeErrorCode == 1223)
         {
-            MessageBox.Show(
-                "Для изменения системного hosts нужны права администратора.",
-                "NetBypass",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
+            Debug.WriteLine("Запуск с правами администратора отменён.");
         }
     }
 

@@ -22,6 +22,13 @@ public interface IEndpointProbe
         HealthCheckDefinition healthCheck,
         IPAddress targetAddress,
         CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<ProbeResult>> ProbeAsync(
+        HealthCheckDefinition healthCheck,
+        IPAddress targetAddress,
+        IProgress<ProbeStage>? stageProgress,
+        CancellationToken cancellationToken) =>
+        ProbeAsync(healthCheck, targetAddress, cancellationToken);
 }
 
 public sealed class CloudflareGoogleDohResolver : IDohResolver
@@ -89,9 +96,16 @@ public sealed class EndpointProbe(TimeSpan? timeout = null) : IEndpointProbe
 {
     private readonly TimeSpan _timeout = timeout ?? TimeSpan.FromSeconds(4);
 
+    public Task<IReadOnlyList<ProbeResult>> ProbeAsync(
+        HealthCheckDefinition healthCheck,
+        IPAddress targetAddress,
+        CancellationToken cancellationToken) =>
+        ProbeAsync(healthCheck, targetAddress, null, cancellationToken);
+
     public async Task<IReadOnlyList<ProbeResult>> ProbeAsync(
         HealthCheckDefinition healthCheck,
         IPAddress targetAddress,
+        IProgress<ProbeStage>? stageProgress,
         CancellationToken cancellationToken)
     {
         var results = new List<ProbeResult>();
@@ -101,6 +115,7 @@ public sealed class EndpointProbe(TimeSpan? timeout = null) : IEndpointProbe
 
         using var client = new TcpClient(targetAddress.AddressFamily);
         var stopwatch = Stopwatch.StartNew();
+        stageProgress?.Report(ProbeStage.Tcp);
         try
         {
             await client.ConnectAsync(
@@ -139,6 +154,7 @@ public sealed class EndpointProbe(TimeSpan? timeout = null) : IEndpointProbe
         await using var networkStream = client.GetStream();
         using var tlsStream = new SslStream(networkStream, leaveInnerStreamOpen: false);
         stopwatch.Restart();
+        stageProgress?.Report(ProbeStage.Tls);
         try
         {
             await tlsStream.AuthenticateAsClientAsync(
@@ -178,6 +194,7 @@ public sealed class EndpointProbe(TimeSpan? timeout = null) : IEndpointProbe
         }
 
         stopwatch.Restart();
+        stageProgress?.Report(ProbeStage.Http);
         try
         {
             var request = Encoding.ASCII.GetBytes(
@@ -243,6 +260,7 @@ public sealed class NetworkDiagnosticService(
     public async Task<ServiceDiagnosticResult> DiagnoseAsync(
         ServiceProfile profile,
         EndpointSelection? previousSelection = null,
+        IProgress<NetworkDiagnosticProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
         var checkedAt = DateTimeOffset.UtcNow;
@@ -252,11 +270,13 @@ public sealed class NetworkDiagnosticService(
         foreach (var host in profile.HealthChecks.Select(check => check.Host)
                      .Distinct(StringComparer.OrdinalIgnoreCase))
         {
+            ReportProgress(profile, progress, ProbeStage.Dns, null,
+                $"DoH-запрос для {host}");
             var resolved = await dohResolver.ResolveAsync(
                 host,
                 cancellationToken);
             resolvedAddresses.UnionWith(resolved);
-            results.Add(new ProbeResult(
+            var dnsResult = new ProbeResult(
                 ProbeStage.Dns,
                 resolved.Count > 0 ? ProbeStatus.Success : ProbeStatus.Warning,
                 null,
@@ -265,7 +285,9 @@ public sealed class NetworkDiagnosticService(
                 resolved.Count > 0
                     ? $"{host}: DoH вернул адресов — {resolved.Count}"
                     : $"{host}: DoH не ответил",
-                checkedAt));
+                checkedAt);
+            results.Add(dnsResult);
+            ReportProgress(profile, progress, dnsResult);
         }
 
         var candidates = BuildCandidates(profile);
@@ -282,8 +304,10 @@ public sealed class NetworkDiagnosticService(
         if (previousCandidate is not null)
         {
             var previousResult = await ProbeCandidateAsync(
+                profile,
                 previousCandidate,
                 isPreviousSelection: true,
+                progress,
                 cancellationToken);
             checkedCandidates.Add(previousResult);
             results.AddRange(previousResult.Probes);
@@ -303,7 +327,12 @@ public sealed class NetworkDiagnosticService(
                 .ToArray();
 
             var probed = await Task.WhenAll(remaining.Select(candidate =>
-                ProbeCandidateAsync(candidate, isPreviousSelection: false, cancellationToken)));
+                ProbeCandidateAsync(
+                    profile,
+                    candidate,
+                    isPreviousSelection: false,
+                    progress,
+                    cancellationToken)));
             checkedCandidates.AddRange(probed);
             foreach (var candidate in probed)
                 results.AddRange(candidate.Probes);
@@ -341,22 +370,64 @@ public sealed class NetworkDiagnosticService(
     }
 
     private async Task<CandidateProbeResult> ProbeCandidateAsync(
+        ServiceProfile profile,
         EndpointCandidate candidate,
         bool isPreviousSelection,
+        IProgress<NetworkDiagnosticProgress>? progress,
         CancellationToken cancellationToken)
     {
+        ReportProgress(profile, progress, ProbeStage.Tcp, null,
+            $"TCP-подключение к {candidate.Address}:{candidate.Port}");
         var healthCheck = new HealthCheckDefinition(
             candidate.Address,
             candidate.Host,
             candidate.Port,
             candidate.Protocol,
             candidate.AcceptedHttpStatuses);
+        var stageProgress = new Progress<ProbeStage>(stage =>
+            ReportProgress(
+                profile,
+                progress,
+                stage,
+                null,
+                StageRunningMessage(stage, candidate)));
         var probes = await endpointProbe.ProbeAsync(
             healthCheck,
             IPAddress.Parse(candidate.Address),
+            stageProgress,
             cancellationToken);
+        foreach (var probe in probes)
+            ReportProgress(profile, progress, probe);
         return new CandidateProbeResult(candidate, isPreviousSelection, probes);
     }
+
+    private static void ReportProgress(
+        ServiceProfile profile,
+        IProgress<NetworkDiagnosticProgress>? progress,
+        ProbeResult result) =>
+        ReportProgress(profile, progress, result.Stage, result.Status, result.Message);
+
+    private static void ReportProgress(
+        ServiceProfile profile,
+        IProgress<NetworkDiagnosticProgress>? progress,
+        ProbeStage stage,
+        ProbeStatus? status,
+        string message) =>
+        progress?.Report(new NetworkDiagnosticProgress(
+            profile.Id,
+            profile.Name,
+            stage,
+            status,
+            message));
+
+    private static string StageRunningMessage(ProbeStage stage, EndpointCandidate candidate) =>
+        stage switch
+        {
+            ProbeStage.Tcp => $"TCP-подключение к {candidate.Address}:{candidate.Port}",
+            ProbeStage.Tls => $"TLS-рукопожатие с {candidate.Host}",
+            ProbeStage.Http => $"HTTP HEAD-запрос к {candidate.Host}",
+            _ => $"DoH-запрос для {candidate.Host}"
+        };
 
     private static IReadOnlyList<EndpointCandidate> BuildCandidates(ServiceProfile profile)
     {

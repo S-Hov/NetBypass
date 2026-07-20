@@ -25,6 +25,13 @@ public sealed record ProbeResult(
     string Message,
     DateTimeOffset CheckedAt);
 
+public sealed record NetworkDiagnosticProgress(
+    string ServiceId,
+    string ServiceName,
+    ProbeStage Stage,
+    ProbeStatus? Status,
+    string Message);
+
 public sealed record ServiceDiagnosticResult(
     string ServiceId,
     string ServiceName,

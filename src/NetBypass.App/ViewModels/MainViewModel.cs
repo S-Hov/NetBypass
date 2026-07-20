@@ -84,6 +84,7 @@ public sealed class MainViewModel : ObservableObject
             service.PropertyChanged += OnAntiDpiServicePropertyChanged;
 
         Diagnostics = new ObservableCollection<DiagnosticItemViewModel>();
+        ServiceActivity = new ObservableCollection<OperationTraceItemViewModel>();
         Engines = new ObservableCollection<EngineCardViewModel>(CreateEngineCards(IsGoodbyeDpiInstalled));
         CleanupItems = new ObservableCollection<string>();
         EngineActivityLog = new ObservableCollection<string>();
@@ -93,7 +94,7 @@ public sealed class MainViewModel : ObservableObject
             TogglePowerAsync,
             () => !IsBusy && HostsState != HostsState.Corrupted);
         ApplyCommand = new AsyncRelayCommand(
-            ApplySelectedServicesAsync,
+            ApplyFromServicesAsync,
             () => !IsBusy
                   && HasSelectedBypassTarget
                   && HostsState != HostsState.Corrupted);
@@ -120,6 +121,7 @@ public sealed class MainViewModel : ObservableObject
     public ObservableCollection<ServiceItemViewModel> Services { get; }
     public ObservableCollection<AntiDpiServiceItemViewModel> AntiDpiServices { get; }
     public ObservableCollection<DiagnosticItemViewModel> Diagnostics { get; }
+    public ObservableCollection<OperationTraceItemViewModel> ServiceActivity { get; }
     public ObservableCollection<EngineCardViewModel> Engines { get; }
     public ObservableCollection<string> CleanupItems { get; }
     public ObservableCollection<string> EngineActivityLog { get; }
@@ -223,6 +225,10 @@ public sealed class MainViewModel : ObservableObject
     public bool HasAvailabilitySummary => IsPowerOn && SelectedServiceCount > 0;
     public bool HasCleanupItems => CleanupItems.Count > 0;
     public bool HasEngineActivityLog => EngineActivityLog.Count > 0;
+    public bool HasServiceActivity => ServiceActivity.Count > 0;
+    public bool HasLiveActivity => HasServiceActivity || HasEngineActivityLog;
+    public bool HasNoEngineActivityLog => !HasEngineActivityLog;
+    public bool HasNoServiceActivity => !HasServiceActivity;
     public string CleanupTitle
     {
         get => _cleanupTitle;
@@ -739,6 +745,27 @@ public sealed class MainViewModel : ObservableObject
         }
     }
 
+    private async Task ApplyFromServicesAsync()
+    {
+        CurrentPage = AppPage.Home;
+        if (!IsPowerOn)
+        {
+            await TogglePowerAsync();
+            return;
+        }
+
+        PowerOperation = PowerOperation.Connecting;
+        try
+        {
+            await ApplySelectedServicesAsync();
+            await Task.Delay(450);
+        }
+        finally
+        {
+            PowerOperation = PowerOperation.None;
+        }
+    }
+
     private async Task DiagnoseSelectedAsync()
     {
         var selected = Services.Where(item => item.IsSelected).ToArray();
@@ -800,6 +827,8 @@ public sealed class MainViewModel : ObservableObject
         {
             _lastAntiDpiOptimizationResult = null;
             IsGoodbyeDpiRuntimeEnabled = false;
+            if (selectedAntiDpi.Count > 0)
+                AddEngineActivity("GoodbyeDPI не установлен — проверка движка пропущена.");
             return selectedAntiDpi.Count == 0
                 ? string.Empty
                 : "GoodbyeDPI ещё не скачан.";
@@ -811,6 +840,7 @@ public sealed class MainViewModel : ObservableObject
             var stopped = await _goodbyeDpiRuntimeService.DisableAsync();
             IsGoodbyeDpiRuntimeEnabled = false;
             EngineOperationMessage = stopped.Message;
+            AddEngineActivity(stopped.Message);
             return "Anti-DPI сервисы не выбраны, GoodbyeDPI выключен.";
         }
 
@@ -872,6 +902,13 @@ public sealed class MainViewModel : ObservableObject
         DiagnosticCompleted = 0;
         CurrentDiagnosticService = string.Empty;
         Diagnostics.Clear();
+        ServiceActivity.Clear();
+        foreach (var item in selected)
+            ServiceActivity.Add(new OperationTraceItemViewModel(item.Profile.Id, item.Name));
+        OnPropertyChanged(nameof(HasServiceActivity));
+        OnPropertyChanged(nameof(HasNoServiceActivity));
+        OnPropertyChanged(nameof(HasLiveActivity));
+        var progress = new Progress<NetworkDiagnosticProgress>(UpdateServiceActivity);
         var previousSelections = _endpointSelectionStore.Load();
 
         using var semaphore = new SemaphoreSlim(6);
@@ -883,7 +920,8 @@ public sealed class MainViewModel : ObservableObject
                 previousSelections.TryGetValue(item.Profile.Id, out var previousSelection);
                 var result = await _diagnosticService.DiagnoseAsync(
                     item.Profile,
-                    previousSelection);
+                    previousSelection,
+                    progress);
                 return (Item: item, Result: result);
             }
             finally
@@ -902,10 +940,19 @@ public sealed class MainViewModel : ObservableObject
             DiagnosticCompleted++;
             CurrentDiagnosticService = completed.Item.Name;
             Diagnostics.Add(new DiagnosticItemViewModel(completed.Result));
+            ServiceActivity.First(item => item.ServiceId == completed.Item.Profile.Id)
+                .Complete(completed.Result);
         }
 
         CurrentDiagnosticService = string.Empty;
         return results;
+    }
+
+    private void UpdateServiceActivity(NetworkDiagnosticProgress progress)
+    {
+        ServiceActivity.FirstOrDefault(item => item.ServiceId == progress.ServiceId)
+            ?.Update(progress);
+        CurrentDiagnosticService = progress.ServiceName;
     }
 
     private void SaveAndDisplayDiagnostics(
@@ -930,13 +977,21 @@ public sealed class MainViewModel : ObservableObject
             return;
 
         foreach (var result in snapshot.Services.OrderBy(result => result.ServiceName))
+        {
             Diagnostics.Add(new DiagnosticItemViewModel(result));
+            var trace = new OperationTraceItemViewModel(result.ServiceId, result.ServiceName);
+            trace.Complete(result);
+            ServiceActivity.Add(trace);
+        }
 
         _unavailableServiceIds = snapshot.Services
             .Where(result => !result.IsReachable)
             .Select(result => result.ServiceId)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         RaiseAvailabilityProperties();
+        OnPropertyChanged(nameof(HasServiceActivity));
+        OnPropertyChanged(nameof(HasNoServiceActivity));
+        OnPropertyChanged(nameof(HasLiveActivity));
     }
 
     private static IReadOnlyList<AntiDpiServiceItemViewModel> CreateAntiDpiServices(
@@ -1173,6 +1228,8 @@ public sealed class MainViewModel : ObservableObject
     {
         EngineActivityLog.Clear();
         OnPropertyChanged(nameof(HasEngineActivityLog));
+        OnPropertyChanged(nameof(HasNoEngineActivityLog));
+        OnPropertyChanged(nameof(HasLiveActivity));
     }
 
     private void AddEngineActivity(string message)
@@ -1184,6 +1241,8 @@ public sealed class MainViewModel : ObservableObject
         while (EngineActivityLog.Count > 9)
             EngineActivityLog.RemoveAt(0);
         OnPropertyChanged(nameof(HasEngineActivityLog));
+        OnPropertyChanged(nameof(HasNoEngineActivityLog));
+        OnPropertyChanged(nameof(HasLiveActivity));
     }
 
     private void SetCleanupReport(

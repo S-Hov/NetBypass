@@ -63,6 +63,31 @@ public sealed class NetworkDiagnosticServiceTests
     }
 
     [Fact]
+    public async Task DiagnoseAsync_ReportsLiveDohTcpTlsAndHttpStages()
+    {
+        var events = new List<NetworkDiagnosticProgress>();
+        var service = new NetworkDiagnosticService(
+            new FakeResolver([IPAddress.Parse("104.18.1.1")]),
+            new FakeProbe(
+            [
+                Result(ProbeStage.Tcp, ProbeStatus.Success),
+                Result(ProbeStage.Tls, ProbeStatus.Success),
+                Result(ProbeStage.Http, ProbeStatus.Warning)
+            ]));
+
+        await service.DiagnoseAsync(
+            Profile,
+            progress: new InlineProgress<NetworkDiagnosticProgress>(events.Add));
+
+        Assert.Contains(events, item => item.Stage == ProbeStage.Dns && item.Status is null);
+        Assert.Contains(events, item => item.Stage == ProbeStage.Dns && item.Status == ProbeStatus.Success);
+        Assert.Contains(events, item => item.Stage == ProbeStage.Tcp && item.Status is null);
+        Assert.Contains(events, item => item.Stage == ProbeStage.Tcp && item.Status == ProbeStatus.Success);
+        Assert.Contains(events, item => item.Stage == ProbeStage.Tls && item.Status == ProbeStatus.Success);
+        Assert.Contains(events, item => item.Stage == ProbeStage.Http && item.Status == ProbeStatus.Warning);
+    }
+
+    [Fact]
     public async Task DiagnoseAsync_WhenPreviousSelectionWorks_ReusesIt()
     {
         var profile = Profile with
@@ -290,6 +315,11 @@ public sealed class NetworkDiagnosticServiceTests
             string hostname,
             CancellationToken cancellationToken) =>
             Task.FromResult(addresses);
+    }
+
+    private sealed class InlineProgress<T>(Action<T> report) : IProgress<T>
+    {
+        public void Report(T value) => report(value);
     }
 
     private sealed class FakeProbe(IReadOnlyList<ProbeResult> results) : IEndpointProbe

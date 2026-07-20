@@ -63,6 +63,18 @@
       <Setter Property="Foreground" Value="#C9C1FF" />
       <Setter Property="BorderBrush" Value="#42376F" />
     </Style>
+    <Style Selector="Button.nav Path.navIcon">
+      <Setter Property="Stroke" Value="#858DA1" />
+      <Setter Property="StrokeThickness" Value="1.8" />
+      <Setter Property="StrokeLineCap" Value="Round" />
+      <Setter Property="StrokeJoin" Value="Round" />
+    </Style>
+    <Style Selector="Button.nav:pointerover Path.navIcon">
+      <Setter Property="Stroke" Value="#F0F2F8" />
+    </Style>
+    <Style Selector="Button.nav.active Path.navIcon">
+      <Setter Property="Stroke" Value="#C9C1FF" />
+    </Style>
     <Style Selector="Border.serviceCard:pointerover">
       <Setter Property="Background" Value="#1A2030" />
       <Setter Property="BorderBrush" Value="#3A4359" />
@@ -81,11 +93,19 @@
       <Setter Property="Background" Value="#272D3D" />
       <Setter Property="CornerRadius" Value="3" />
     </Style>
-    <Style Selector="Button.power">
+    <Style Selector="Button.power.transitioning">
       <Style.Animations>
-        <Animation Duration="0:0:2.4" IterationCount="Infinite" PlaybackDirection="Alternate" Easing="SineEaseInOut">
-          <KeyFrame Cue="0%"><Setter Property="Opacity" Value="0.82" /></KeyFrame>
+        <Animation Duration="0:0:0.62" IterationCount="Infinite" PlaybackDirection="Alternate" Easing="SineEaseInOut">
+          <KeyFrame Cue="0%"><Setter Property="Opacity" Value="0.48" /></KeyFrame>
           <KeyFrame Cue="100%"><Setter Property="Opacity" Value="1" /></KeyFrame>
+        </Animation>
+      </Style.Animations>
+    </Style>
+    <Style Selector="Border.powerWave">
+      <Style.Animations>
+        <Animation Duration="0:0:0.9" IterationCount="Infinite" PlaybackDirection="Alternate" Easing="SineEaseInOut">
+          <KeyFrame Cue="0%"><Setter Property="Opacity" Value="0.1" /></KeyFrame>
+          <KeyFrame Cue="100%"><Setter Property="Opacity" Value="0.7" /></KeyFrame>
         </Animation>
       </Style.Animations>
     </Style>
@@ -104,12 +124,7 @@
       <Border Grid.Column="0" Background="#0E111A" BorderBrush="#202534" BorderThickness="0,0,1,0">
         <Grid Margin="20,24" RowDefinitions="Auto,Auto,*,Auto">
           <StackPanel Orientation="Horizontal" Spacing="11">
-            <Border Width="38" Height="38" CornerRadius="12" Background="#7B63FF" BoxShadow="0 7 22 0 #607B63FF">
-              <Grid>
-                <Border Width="17" Height="17" CornerRadius="9" BorderThickness="3" BorderBrush="White" />
-                <Border Width="5" Height="5" CornerRadius="3" Background="White" />
-              </Grid>
-            </Border>
+            <TextBlock Text="N" Width="38" FontSize="31" FontWeight="Black" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" />
             <StackPanel VerticalAlignment="Center" Spacing="1">
               <TextBlock Text="NetBypass" FontSize="18" FontWeight="Bold" />
               <TextBlock Text="NETWORK CONTROL" FontSize="8" LetterSpacing="1.6" Foreground="#6F778A" />
@@ -119,19 +134,19 @@
           <StackPanel Grid.Row="1" Margin="0,34,0,0">
             <TextBlock Text="РАЗДЕЛЫ" Classes="eyebrow" Margin="12,0,0,8" Foreground="#596174" />
             <Button Classes="nav" Classes.active="{Binding IsHomePage}" Command="{Binding ShowHomeCommand}">
-              <Grid ColumnDefinitions="30,*"><TextBlock Text="●" FontSize="11" VerticalAlignment="Center" /><TextBlock Grid.Column="1" Text="Главная" /></Grid>
+              <Grid ColumnDefinitions="30,*"><Path Classes="navIcon" Width="18" Height="18" Stretch="Uniform" Data="M3,11 L12,3 L21,11 M5,10 V21 H10 V15 H14 V21 H19 V10" /><TextBlock Grid.Column="1" Text="Главная" /></Grid>
             </Button>
             <Button Classes="nav" Classes.active="{Binding IsServicesPage}" Command="{Binding ShowServicesCommand}">
-              <Grid ColumnDefinitions="30,*"><TextBlock Text="◈" FontSize="16" VerticalAlignment="Center" /><TextBlock Grid.Column="1" Text="Сервисы" /></Grid>
+              <Grid ColumnDefinitions="30,*"><Path Classes="navIcon" Width="18" Height="18" Stretch="Uniform" Data="M4,6 H9 M15,6 H20 M12,3 V9 M4,12 H13 M19,12 H20 M16,9 V15 M4,18 H7 M13,18 H20 M10,15 V21" /><TextBlock Grid.Column="1" Text="Сервисы" /></Grid>
             </Button>
             <Button Classes="nav" Classes.active="{Binding IsEnginesPage}" Command="{Binding ShowEnginesCommand}">
-              <Grid ColumnDefinitions="30,*"><TextBlock Text="⌁" FontSize="20" VerticalAlignment="Center" /><TextBlock Grid.Column="1" Text="Движки" /></Grid>
+              <Grid ColumnDefinitions="30,*"><Path Classes="navIcon" Width="18" Height="18" Stretch="Uniform" Data="M13,2 L5,13 H11 L10,22 L19,10 H13 Z" /><TextBlock Grid.Column="1" Text="Движки" /></Grid>
             </Button>
             <Button Classes="nav" Classes.active="{Binding IsDiagnosticsPage}" Command="{Binding ShowDiagnosticsCommand}">
-              <Grid ColumnDefinitions="30,*"><TextBlock Text="⌁" FontSize="20" VerticalAlignment="Center" /><TextBlock Grid.Column="1" Text="Диагностика" /></Grid>
+              <Grid ColumnDefinitions="30,*"><Path Classes="navIcon" Width="18" Height="18" Stretch="Uniform" Data="M2,12 H6 L9,5 L14,19 L17,12 H22" /><TextBlock Grid.Column="1" Text="Диагностика" /></Grid>
             </Button>
             <Button Classes="nav" Classes.active="{Binding IsSettingsPage}" Command="{Binding ShowSettingsCommand}">
-              <Grid ColumnDefinitions="30,*"><TextBlock Text="⚙" FontSize="16" VerticalAlignment="Center" /><TextBlock Grid.Column="1" Text="Настройки" /></Grid>
+              <Grid ColumnDefinitions="30,*"><Path Classes="navIcon" Width="18" Height="18" Stretch="Uniform" Data="M4,6 H14 M18,6 H20 M16,3 V9 M4,12 H7 M11,12 H20 M9,9 V15 M4,18 H13 M17,18 H20 M15,15 V21" /><TextBlock Grid.Column="1" Text="Настройки" /></Grid>
             </Button>
           </StackPanel>
 
@@ -166,7 +181,7 @@
                 <TextBlock Text="Центр управления" Classes="title" />
                 <TextBlock Text="Один спокойный экран для контроля маршрутизации и Anti-DPI." Classes="subtitle" />
               </StackPanel>
-              <Border Grid.Column="1" CornerRadius="20" Padding="13,8" Background="#151B27" BorderBrush="#293145" BorderThickness="1">
+              <Border Grid.Column="1" CornerRadius="20" Padding="13,8" Background="#151B27" BorderBrush="#293145" BorderThickness="1" VerticalAlignment="Top">
                 <StackPanel Orientation="Horizontal" Spacing="8"><Border Classes="liveDot" Width="7" Height="7" CornerRadius="4" Background="{Binding StateAccent}" VerticalAlignment="Center" /><TextBlock Text="LIVE STATUS" FontSize="10" FontWeight="Bold" LetterSpacing="1" Foreground="#AEB5C7" /></StackPanel>
               </Border>
             </Grid>
@@ -174,23 +189,22 @@
             <Grid ColumnDefinitions="1.15*,0.85*" ColumnSpacing="18">
               <Border Classes="card" Padding="28" MinHeight="338">
                 <Grid RowDefinitions="Auto,*,Auto">
-                  <Grid ColumnDefinitions="*,Auto">
+                  <Grid>
                     <StackPanel Spacing="6">
                       <TextBlock Text="ЗАЩИЩЁННЫЙ МАРШРУТ" Classes="eyebrow" />
                       <TextBlock Text="{Binding StateTitle}" FontSize="23" FontWeight="Bold" />
                       <TextBlock Text="{Binding StateDescription}" MaxWidth="440" Classes="subtitle" TextWrapping="Wrap" />
                     </StackPanel>
-                    <Border Grid.Column="1" Width="50" Height="50" CornerRadius="25" Background="#111621" BorderBrush="{Binding StateAccent}" BorderThickness="1">
-                      <TextBlock Text="N" FontSize="18" FontWeight="Bold" Foreground="{Binding StateAccent}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                    </Border>
                   </Grid>
 
-                  <Button Grid.Row="1" Classes="power" Command="{Binding PowerCommand}" Width="172" Height="172" Padding="0" Margin="0,14" HorizontalAlignment="Center" CornerRadius="86" Background="#101520" BorderBrush="{Binding StateAccent}" BorderThickness="2">
+                  <Button Grid.Row="1" Classes="power" Classes.transitioning="{Binding IsPowerTransitioning}" Command="{Binding PowerCommand}" Width="172" Height="172" Padding="0" Margin="0,14" HorizontalAlignment="Center" CornerRadius="86" Background="#101520" BorderBrush="{Binding StateAccent}" BorderThickness="2">
                     <Grid>
+                      <Border Classes="powerWave" IsVisible="{Binding IsPowerTransitioning}" Margin="2" CornerRadius="84" BorderBrush="{Binding StateAccent}" BorderThickness="5" />
                       <Border Margin="13" CornerRadius="72" BorderBrush="{Binding StateAccent}" BorderThickness="1" Opacity="0.22" />
                       <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="7">
                         <TextBlock Text="⏻" FontSize="40" Foreground="{Binding StateAccent}" HorizontalAlignment="Center" />
                         <TextBlock Text="{Binding PowerButtonLabel}" FontSize="12" FontWeight="Bold" />
+                        <TextBlock Text="•••" IsVisible="{Binding IsPowerTransitioning}" FontSize="13" LetterSpacing="3" Foreground="{Binding StateAccent}" HorizontalAlignment="Center" />
                       </StackPanel>
                     </Grid>
                   </Button>
@@ -220,6 +234,64 @@
                 <Button Classes="danger" Content="Восстановить hosts" Click="RestoreHosts_Click" HorizontalAlignment="Stretch" />
               </StackPanel>
             </Grid>
+
+            <Border Classes="card" Padding="0" ClipToBounds="True">
+              <Grid ColumnDefinitions="1.5*,0.9*">
+                <StackPanel Margin="22" Spacing="13">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <StackPanel Spacing="3">
+                      <TextBlock Text="Живая цепочка запросов" Classes="sectionTitle" />
+                      <TextBlock Text="Фактические этапы проверки выбранных сервисов" Classes="subtitle" FontSize="11" />
+                    </StackPanel>
+                    <Border Grid.Column="1" Padding="10,5" CornerRadius="12" Background="#20203A" VerticalAlignment="Top">
+                      <TextBlock Text="{Binding DiagnosticProgressText}" FontSize="10" Foreground="#BDB5FF" />
+                    </Border>
+                  </Grid>
+                  <TextBlock Text="Проверки ещё не запускались. Нажмите «Включить» — здесь появится маршрут каждого сервиса." IsVisible="{Binding HasNoServiceActivity}" Classes="subtitle" TextWrapping="Wrap" Margin="0,12" />
+                  <ScrollViewer MaxHeight="310" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding ServiceActivity}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                          <Border Padding="12,10" Margin="0,0,0,7" CornerRadius="12" Background="#111722" BorderBrush="#242B3A" BorderThickness="1">
+                            <Grid ColumnDefinitions="155,*,Auto" ColumnSpacing="12">
+                              <StackPanel Spacing="3" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding ServiceName}" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="{Binding CurrentMessage}" FontSize="9" Foreground="#727B90" TextTrimming="CharacterEllipsis" />
+                              </StackPanel>
+                              <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
+                                <Border Padding="7,4" CornerRadius="8" Background="#161C28" BorderBrush="{Binding DnsColor}" BorderThickness="1"><StackPanel Orientation="Horizontal" Spacing="4"><TextBlock Text="{Binding DnsGlyph}" Foreground="{Binding DnsColor}" FontWeight="Bold" /><TextBlock Text="DoH" FontSize="9" Foreground="#AAB2C3" /></StackPanel></Border>
+                                <Border Width="10" Height="1" Background="#343C50" />
+                                <Border Padding="7,4" CornerRadius="8" Background="#161C28" BorderBrush="{Binding TcpColor}" BorderThickness="1"><StackPanel Orientation="Horizontal" Spacing="4"><TextBlock Text="{Binding TcpGlyph}" Foreground="{Binding TcpColor}" FontWeight="Bold" /><TextBlock Text="TCP" FontSize="9" Foreground="#AAB2C3" /></StackPanel></Border>
+                                <Border Width="10" Height="1" Background="#343C50" />
+                                <Border Padding="7,4" CornerRadius="8" Background="#161C28" BorderBrush="{Binding TlsColor}" BorderThickness="1"><StackPanel Orientation="Horizontal" Spacing="4"><TextBlock Text="{Binding TlsGlyph}" Foreground="{Binding TlsColor}" FontWeight="Bold" /><TextBlock Text="TLS" FontSize="9" Foreground="#AAB2C3" /></StackPanel></Border>
+                                <Border Width="10" Height="1" Background="#343C50" />
+                                <Border Padding="7,4" CornerRadius="8" Background="#161C28" BorderBrush="{Binding HttpColor}" BorderThickness="1"><StackPanel Orientation="Horizontal" Spacing="4"><TextBlock Text="{Binding HttpGlyph}" Foreground="{Binding HttpColor}" FontWeight="Bold" /><TextBlock Text="HTTP" FontSize="9" Foreground="#AAB2C3" /></StackPanel></Border>
+                              </StackPanel>
+                              <TextBlock Grid.Column="2" Text="{Binding StatusText}" Foreground="{Binding StatusColor}" FontSize="10" FontWeight="Bold" VerticalAlignment="Center" />
+                            </Grid>
+                          </Border>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </ScrollViewer>
+                </StackPanel>
+
+                <Border Grid.Column="1" Background="#11141E" BorderBrush="#252B3A" BorderThickness="1,0,0,0" Padding="20">
+                  <StackPanel Spacing="13">
+                    <Grid ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="3"><TextBlock Text="Движок" Classes="sectionTitle" /><TextBlock Text="Стратегии GoodbyeDPI" Classes="subtitle" FontSize="11" /></StackPanel>
+                      <Border Grid.Column="1" Width="9" Height="9" CornerRadius="5" Background="{Binding StateAccent}" VerticalAlignment="Top" Margin="0,7,0,0" />
+                    </Grid>
+                    <TextBlock Text="Движок не участвовал в последней операции." IsVisible="{Binding HasNoEngineActivityLog}" Classes="subtitle" TextWrapping="Wrap" Margin="0,12" />
+                    <ScrollViewer MaxHeight="310" VerticalScrollBarVisibility="Auto" IsVisible="{Binding HasEngineActivityLog}">
+                      <ItemsControl ItemsSource="{Binding EngineActivityLog}">
+                        <ItemsControl.ItemTemplate><DataTemplate><Grid ColumnDefinitions="Auto,*" Margin="0,0,0,10"><Border Width="7" Height="7" CornerRadius="4" Background="#8B7CFF" Margin="0,5,10,0" /><TextBlock Grid.Column="1" Text="{Binding}" FontSize="10" Foreground="#AAB2C3" TextWrapping="Wrap" /></Grid></DataTemplate></ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </ScrollViewer>
+                  </StackPanel>
+                </Border>
+              </Grid>
+            </Border>
 
             <Border Classes="card" IsVisible="{Binding HasCleanupItems}">
               <StackPanel Spacing="10"><TextBlock Text="{Binding CleanupTitle}" Classes="sectionTitle" /><ItemsControl ItemsSource="{Binding CleanupItems}"><ItemsControl.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" Margin="0,3" Foreground="#AAB1C2" /></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></StackPanel>

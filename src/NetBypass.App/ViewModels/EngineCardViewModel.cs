@@ -10,7 +10,8 @@ public sealed class EngineCardViewModel(
     IReadOnlyList<string> supportedServices,
     string description,
     string nextStep,
-    bool showDownloadButton = false)
+    bool showDownloadButton = false,
+    bool showRemoveButton = false)
 {
     public string Name => name;
     public BypassEngineKind Kind => kind;
@@ -28,4 +29,5 @@ public sealed class EngineCardViewModel(
     public string Description => description;
     public string NextStep => nextStep;
     public bool ShowDownloadButton => showDownloadButton;
+    public bool ShowRemoveButton => showRemoveButton;
 }

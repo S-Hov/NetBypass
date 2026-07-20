@@ -8,6 +8,7 @@ namespace NetBypass.App;
 public partial class MainWindow : Window
 {
     private Border RestoreOverlay => this.FindControl<Border>(nameof(RestoreOverlay))!;
+    private Border RemoveEngineOverlay => this.FindControl<Border>(nameof(RemoveEngineOverlay))!;
 
     public MainWindow()
     {
@@ -40,5 +41,21 @@ public partial class MainWindow : Window
         RestoreOverlay.IsVisible = false;
         if (DataContext is MainViewModel viewModel)
             viewModel.RestoreConfirmed();
+    }
+
+    private void RemoveEngine_Click(object? sender, RoutedEventArgs e) =>
+        RemoveEngineOverlay.IsVisible = true;
+
+    private void CancelRemoveEngine_Click(object? sender, RoutedEventArgs e) =>
+        RemoveEngineOverlay.IsVisible = false;
+
+    private void ConfirmRemoveEngine_Click(object? sender, RoutedEventArgs e)
+    {
+        RemoveEngineOverlay.IsVisible = false;
+        if (DataContext is MainViewModel viewModel
+            && viewModel.RemoveGoodbyeDpiCommand.CanExecute(null))
+        {
+            viewModel.RemoveGoodbyeDpiCommand.Execute(null);
+        }
     }
 }

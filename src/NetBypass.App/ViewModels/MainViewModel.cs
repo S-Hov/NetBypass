@@ -114,6 +114,9 @@ public sealed class MainViewModel : ObservableObject
         DownloadGoodbyeDpiCommand = new AsyncRelayCommand(
             DownloadGoodbyeDpiAsync,
             () => !IsBusy && !IsGoodbyeDpiInstalled);
+        RemoveGoodbyeDpiCommand = new AsyncRelayCommand(
+            RemoveGoodbyeDpiAsync,
+            () => !IsBusy && IsGoodbyeDpiInstalled);
 
         RefreshState();
     }
@@ -137,6 +140,7 @@ public sealed class MainViewModel : ObservableObject
     public RelayCommand ShowDiagnosticsCommand { get; }
     public RelayCommand ShowSettingsCommand { get; }
     public AsyncRelayCommand DownloadGoodbyeDpiCommand { get; }
+    public AsyncRelayCommand RemoveGoodbyeDpiCommand { get; }
 
     public HostsState HostsState
     {
@@ -190,6 +194,7 @@ public sealed class MainViewModel : ObservableObject
             OnPropertyChanged(nameof(HasDiagnosticProgress));
             OnPropertyChanged(nameof(DiagnosticButtonText));
             DownloadGoodbyeDpiCommand?.RaiseCanExecuteChanged();
+            RemoveGoodbyeDpiCommand?.RaiseCanExecuteChanged();
         }
     }
 
@@ -221,6 +226,7 @@ public sealed class MainViewModel : ObservableObject
     public bool IsConnecting => PowerOperation == PowerOperation.Connecting;
     public bool IsDisconnecting => PowerOperation == PowerOperation.Disconnecting;
     public bool IsPowerTransitioning => PowerOperation != PowerOperation.None;
+    public bool ShowHomeActivity => IsPowerOn || IsPowerTransitioning;
     public bool HasUnavailableServices => _unavailableServiceIds.Count > 0;
     public bool HasAvailabilitySummary => IsPowerOn && SelectedServiceCount > 0;
     public bool HasCleanupItems => CleanupItems.Count > 0;
@@ -251,6 +257,7 @@ public sealed class MainViewModel : ObservableObject
             OnPropertyChanged(nameof(AntiDpiSelectionSummary));
             OnPropertyChanged(nameof(HasSelectedBypassTarget));
             DownloadGoodbyeDpiCommand?.RaiseCanExecuteChanged();
+            RemoveGoodbyeDpiCommand?.RaiseCanExecuteChanged();
             RebuildEngineCards();
         }
     }
@@ -538,6 +545,56 @@ public sealed class MainViewModel : ObservableObject
         catch (Exception exception)
         {
             EngineOperationMessage = ToUserMessage("Не удалось скачать GoodbyeDPI", exception);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    private async Task RemoveGoodbyeDpiAsync()
+    {
+        var wasPowerOn = IsPowerOn;
+        IsBusy = true;
+        EngineOperationMessage = "Останавливаем GoodbyeDPI и удаляем его файлы...";
+        ClearEngineActivityLog();
+        AddEngineActivity("Останавливаем процесс и очищаем WinDivert.");
+        try
+        {
+            await _goodbyeDpiRuntimeService.DisableAsync();
+            IsGoodbyeDpiRuntimeEnabled = false;
+
+            foreach (var service in AntiDpiServices)
+                service.IsSelected = false;
+            _lastAntiDpiOptimizationResult = null;
+            _antiDpiStrategySelectionStore.Clear();
+
+            if (wasPowerOn)
+            {
+                var regularModules = GetExpectedActiveModules(
+                        Services.Where(item => item.IsSelected).ToArray())
+                    .Where(module => module.Id != "anti-dpi-routing");
+                ApplyManagedModules(regularModules, antiDpiAddresses: null);
+                DnsCacheService.Flush();
+            }
+
+            _settingsService.Save(
+                Services.Where(item => item.IsSelected).Select(item => item.Module.Id),
+                []);
+            var result = _goodbyeDpiInstallService.Uninstall();
+            IsGoodbyeDpiInstalled = _goodbyeDpiInstallService.IsInstalled();
+            EngineOperationMessage = result.Message;
+            OperationMessage = result.Message;
+            AddEngineActivity(result.Message);
+            RefreshState();
+        }
+        catch (Exception exception)
+        {
+            IsGoodbyeDpiInstalled = _goodbyeDpiInstallService.IsInstalled();
+            EngineOperationMessage = ToUserMessage("Не удалось удалить GoodbyeDPI", exception);
+            OperationMessage = EngineOperationMessage;
+            AddEngineActivity(EngineOperationMessage);
+            RefreshState();
         }
         finally
         {
@@ -1029,7 +1086,8 @@ public sealed class MainViewModel : ObservableObject
             isGoodbyeDpiInstalled
                 ? "Следующий шаг: запуск базового профиля и безопасная остановка."
                 : "Сначала скачиваем официальный архив GoodbyeDPI и сохраняем его в папку пользователя.",
-            showDownloadButton: !isGoodbyeDpiInstalled),
+            showDownloadButton: !isGoodbyeDpiInstalled,
+            showRemoveButton: isGoodbyeDpiInstalled),
         new EngineCardViewModel(
             "zapret / zapret2",
             BypassEngineKind.AntiDpi,
@@ -1184,6 +1242,7 @@ public sealed class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(CurrentUiState));
         OnPropertyChanged(nameof(PowerButtonLabel));
         OnPropertyChanged(nameof(IsPowerOn));
+        OnPropertyChanged(nameof(ShowHomeActivity));
         OnPropertyChanged(nameof(IsCorrupted));
         PowerCommand?.RaiseCanExecuteChanged();
         ApplyCommand?.RaiseCanExecuteChanged();

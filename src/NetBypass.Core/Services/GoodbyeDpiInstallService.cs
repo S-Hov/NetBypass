@@ -86,6 +86,26 @@ public sealed class GoodbyeDpiInstallService
         }
     }
 
+    public GoodbyeDpiUninstallResult Uninstall()
+    {
+        var fullInstallRoot = Path.GetFullPath(InstallRoot);
+        if (string.Equals(
+                fullInstallRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+                Path.GetPathRoot(fullInstallRoot)?.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+                StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("Каталог установки движка не может быть корнем диска.");
+        }
+
+        if (!Directory.Exists(fullInstallRoot))
+            return new GoodbyeDpiUninstallResult(true, "GoodbyeDPI уже удалён.");
+
+        Directory.Delete(fullInstallRoot, recursive: true);
+        return new GoodbyeDpiUninstallResult(
+            !Directory.Exists(fullInstallRoot),
+            "GoodbyeDPI и его файлы удалены.");
+    }
+
     private async Task DownloadArchiveAsync(
         string downloadPath,
         CancellationToken cancellationToken)
@@ -109,3 +129,5 @@ public sealed record GoodbyeDpiInstallResult(
     bool IsInstalled,
     string Message,
     string? ExecutablePath);
+
+public sealed record GoodbyeDpiUninstallResult(bool IsRemoved, string Message);

@@ -54,4 +54,24 @@ public sealed class GoodbyeDpiInstallServiceTests
         Assert.NotNull(executable);
         Assert.Contains("x86_64", executable, StringComparison.OrdinalIgnoreCase);
     }
+
+    [Fact]
+    public void Uninstall_RemovesOnlyTheEngineInstallDirectory()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        var installDirectory = Path.Combine(directory, "install");
+        Directory.CreateDirectory(Path.Combine(installDirectory, "current", "x86_64"));
+        File.WriteAllText(
+            Path.Combine(installDirectory, "current", "x86_64", "goodbyedpi.exe"),
+            "demo");
+        var siblingFile = Path.Combine(directory, "settings.json");
+        File.WriteAllText(siblingFile, "keep");
+
+        var result = new GoodbyeDpiInstallService(installDirectory).Uninstall();
+
+        Assert.True(result.IsRemoved);
+        Assert.False(Directory.Exists(installDirectory));
+        Assert.True(File.Exists(siblingFile));
+        Directory.Delete(directory, recursive: true);
+    }
 }

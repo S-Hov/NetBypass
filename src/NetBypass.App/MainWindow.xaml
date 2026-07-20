@@ -235,7 +235,7 @@
               </StackPanel>
             </Grid>
 
-            <Border Classes="card" Padding="0" ClipToBounds="True">
+            <Border Classes="card" Padding="0" ClipToBounds="True" IsVisible="{Binding ShowHomeActivity}">
               <Grid ColumnDefinitions="1.5*,0.9*">
                 <StackPanel Margin="22" Spacing="13">
                   <Grid ColumnDefinitions="*,Auto">
@@ -338,7 +338,33 @@
         <!-- ENGINES -->
         <Grid IsVisible="{Binding IsEnginesPage}" RowDefinitions="Auto,*">
           <StackPanel Margin="38,32,38,18" Spacing="5"><TextBlock Text="ИНСТРУМЕНТЫ" Classes="eyebrow" /><TextBlock Text="Движки" Classes="title" /><TextBlock Text="Низкоуровневые адаптеры для сложных сценариев блокировок." Classes="subtitle" /></StackPanel>
-          <ScrollViewer Grid.Row="1"><StackPanel Margin="38,0,38,40" Spacing="16"><Border Classes="card" Background="#17152A"><StackPanel Spacing="6"><TextBlock Text="Anti-DPI runtime" Classes="sectionTitle" /><TextBlock Text="{Binding GoodbyeDpiRuntimeStatus}" Classes="subtitle" TextWrapping="Wrap" /><TextBlock Text="{Binding EngineOperationMessage}" IsVisible="{Binding HasEngineOperationMessage}" Foreground="#C9C1FF" TextWrapping="Wrap" /></StackPanel></Border><ItemsControl ItemsSource="{Binding Engines}"><ItemsControl.ItemTemplate><DataTemplate><Border Classes="card" Margin="0,0,0,12"><Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto"><StackPanel Spacing="4"><TextBlock Text="{Binding Category}" Classes="eyebrow" /><TextBlock Text="{Binding Name}" FontSize="20" FontWeight="Bold" /><TextBlock Text="{Binding Description}" Classes="subtitle" TextWrapping="Wrap" MaxWidth="650" /></StackPanel><Border Grid.Column="1" Padding="12,7" CornerRadius="15" Background="#18202A" VerticalAlignment="Top"><TextBlock Text="{Binding State}" Foreground="{Binding StatusColor}" FontWeight="Bold" FontSize="11" /></Border><StackPanel Grid.Row="1" Margin="0,16,0,0" Spacing="4"><TextBlock Text="ПОДДЕРЖИВАЕМЫЕ СЕРВИСЫ" Classes="eyebrow" Foreground="#626A7D" /><TextBlock Text="{Binding SupportedServicesText}" Foreground="#B6BDCC" TextWrapping="Wrap" /></StackPanel><StackPanel Grid.Row="2" Margin="0,14,0,0" Orientation="Horizontal" Spacing="12"><TextBlock Text="{Binding NextStep}" Classes="subtitle" VerticalAlignment="Center" /><Button Classes="primary" Content="Скачать движок" IsVisible="{Binding ShowDownloadButton}" Command="{Binding $parent[Window].DataContext.DownloadGoodbyeDpiCommand}" /></StackPanel></Grid></Border></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></StackPanel></ScrollViewer>
+          <ScrollViewer Grid.Row="1">
+            <StackPanel Margin="38,0,38,40" Spacing="16">
+              <Border Classes="card" Background="#17152A">
+                <StackPanel Spacing="6"><TextBlock Text="Anti-DPI runtime" Classes="sectionTitle" /><TextBlock Text="{Binding GoodbyeDpiRuntimeStatus}" Classes="subtitle" TextWrapping="Wrap" /><TextBlock Text="{Binding EngineOperationMessage}" IsVisible="{Binding HasEngineOperationMessage}" Foreground="#C9C1FF" TextWrapping="Wrap" /></StackPanel>
+              </Border>
+              <ItemsControl ItemsSource="{Binding Engines}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Border Classes="card" Margin="0,0,0,12">
+                      <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto">
+                        <StackPanel Spacing="4"><TextBlock Text="{Binding Category}" Classes="eyebrow" /><TextBlock Text="{Binding Name}" FontSize="20" FontWeight="Bold" /><TextBlock Text="{Binding Description}" Classes="subtitle" TextWrapping="Wrap" MaxWidth="650" /></StackPanel>
+                        <Border Grid.Column="1" Padding="12,7" CornerRadius="15" Background="#18202A" VerticalAlignment="Top"><TextBlock Text="{Binding State}" Foreground="{Binding StatusColor}" FontWeight="Bold" FontSize="11" /></Border>
+                        <StackPanel Grid.Row="1" Margin="0,16,0,0" Spacing="4"><TextBlock Text="ПОДДЕРЖИВАЕМЫЕ СЕРВИСЫ" Classes="eyebrow" Foreground="#626A7D" /><TextBlock Text="{Binding SupportedServicesText}" Foreground="#B6BDCC" TextWrapping="Wrap" /></StackPanel>
+                        <Grid Grid.Row="2" Margin="0,14,0,0" ColumnDefinitions="*,Auto">
+                          <TextBlock Text="{Binding NextStep}" Classes="subtitle" VerticalAlignment="Center" TextWrapping="Wrap" />
+                          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="9">
+                            <Button Classes="primary" Content="Скачать движок" IsVisible="{Binding ShowDownloadButton}" Command="{Binding $parent[Window].DataContext.DownloadGoodbyeDpiCommand}" />
+                            <Button Classes="danger" Content="Удалить движок" IsVisible="{Binding ShowRemoveButton}" Click="RemoveEngine_Click" />
+                          </StackPanel>
+                        </Grid>
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </ScrollViewer>
         </Grid>
 
         <!-- SETTINGS -->
@@ -353,6 +379,16 @@
     <Border x:Name="RestoreOverlay" Grid.ColumnSpan="2" Background="#CC070910" IsVisible="False">
       <Border Classes="card" Width="430" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="26" Background="#161A26" BorderBrush="#483342">
         <StackPanel Spacing="16"><Border Width="52" Height="52" CornerRadius="26" Background="#2B1921" HorizontalAlignment="Left"><TextBlock Text="!" FontSize="24" FontWeight="Bold" Foreground="#FF8296" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border><StackPanel Spacing="7"><TextBlock Text="Восстановить hosts?" FontSize="21" FontWeight="Bold" /><TextBlock Text="Будут удалены только записи, добавленные NetBypass. Остальные пользовательские записи останутся без изменений." Classes="subtitle" TextWrapping="Wrap" /></StackPanel><StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="9"><Button Content="Отмена" Click="CancelRestore_Click" /><Button Classes="danger" Content="Да, восстановить" Click="ConfirmRestore_Click" /></StackPanel></StackPanel>
+      </Border>
+    </Border>
+
+    <Border x:Name="RemoveEngineOverlay" Grid.ColumnSpan="2" Background="#CC070910" IsVisible="False">
+      <Border Classes="card" Width="430" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="26" Background="#161A26" BorderBrush="#483342">
+        <StackPanel Spacing="16">
+          <Border Width="52" Height="52" CornerRadius="26" Background="#2B1921" HorizontalAlignment="Left"><TextBlock Text="!" FontSize="24" FontWeight="Bold" Foreground="#FF8296" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
+          <StackPanel Spacing="7"><TextBlock Text="Удалить GoodbyeDPI?" FontSize="21" FontWeight="Bold" /><TextBlock Text="Движок будет остановлен, а его файлы и сохранённая стратегия удалены. Выбранные обычные сервисы NetBypass останутся без изменений." Classes="subtitle" TextWrapping="Wrap" /></StackPanel>
+          <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="9"><Button Content="Отмена" Click="CancelRemoveEngine_Click" /><Button Classes="danger" Content="Да, удалить" Click="ConfirmRemoveEngine_Click" /></StackPanel>
+        </StackPanel>
       </Border>
     </Border>
   </Grid>

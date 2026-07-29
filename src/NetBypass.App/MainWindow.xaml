@@ -370,7 +370,46 @@
         <!-- SETTINGS -->
         <Grid IsVisible="{Binding IsSettingsPage}" RowDefinitions="Auto,*">
           <StackPanel Margin="38,32,38,18" Spacing="5"><TextBlock Text="ПРЕДПОЧТЕНИЯ" Classes="eyebrow" /><TextBlock Text="Настройки" Classes="title" /><TextBlock Text="Поведение приложения и фоновых компонентов." Classes="subtitle" /></StackPanel>
-          <ScrollViewer Grid.Row="1"><StackPanel Margin="38,0,38,40" Spacing="16"><Border Classes="card"><Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="7"><TextBlock Text="Автозапуск приложения" Classes="sectionTitle" /><TextBlock Text="После входа в Windows NetBypass незаметно восстановит выбранные Anti-DPI движки. Окно не появится." Classes="subtitle" TextWrapping="Wrap" MaxWidth="650" /><TextBlock Text="{Binding StartupStatus}" FontSize="11" Foreground="#9CA4B6" TextWrapping="Wrap" /><TextBlock Text="{Binding StartupOperationMessage}" IsVisible="{Binding HasStartupOperationMessage}" FontSize="11" Foreground="#C9C1FF" /></StackPanel><ToggleSwitch Grid.Column="1" IsChecked="{Binding StartWithWindows}" IsEnabled="{Binding IsStartupSettingAvailable}" VerticalAlignment="Top" /></Grid></Border><Border Classes="card" Background="#121722"><StackPanel Spacing="7"><TextBlock Text="Принцип безопасности" Classes="sectionTitle" /><TextBlock Text="NetBypass управляет только собственным блоком записей и не затрагивает пользовательские строки hosts. Перед применением адреса проходят сетевую проверку." Classes="subtitle" TextWrapping="Wrap" /></StackPanel></Border></StackPanel></ScrollViewer>
+          <ScrollViewer Grid.Row="1">
+            <StackPanel Margin="38,0,38,40" Spacing="16">
+              <Border Classes="card">
+                <Grid ColumnDefinitions="*,Auto">
+                  <StackPanel Spacing="7">
+                    <TextBlock Text="Автозапуск приложения" Classes="sectionTitle" />
+                    <TextBlock Text="После входа в Windows NetBypass незаметно восстановит выбранные Anti-DPI движки. Окно не появится." Classes="subtitle" TextWrapping="Wrap" MaxWidth="650" />
+                    <TextBlock Text="{Binding StartupStatus}" FontSize="11" Foreground="#9CA4B6" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding StartupOperationMessage}" IsVisible="{Binding HasStartupOperationMessage}" FontSize="11" Foreground="#C9C1FF" />
+                  </StackPanel>
+                  <ToggleSwitch Grid.Column="1" IsChecked="{Binding StartWithWindows}" IsEnabled="{Binding IsStartupSettingAvailable}" VerticalAlignment="Top" />
+                </Grid>
+              </Border>
+              <Border Classes="card">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="24">
+                  <StackPanel Spacing="7">
+                    <TextBlock Text="Повторная проверка сервисов" Classes="sectionTitle" />
+                    <TextBlock Text="Если сервис не ответил из-за временного сетевого сбоя, NetBypass повторит проверку только для него. Между попытками используется увеличивающаяся задержка." Classes="subtitle" TextWrapping="Wrap" MaxWidth="650" />
+                    <TextBlock Text="Значение задаёт общее количество попыток, включая первую." FontSize="11" Foreground="#9CA4B6" TextWrapping="Wrap" />
+                  </StackPanel>
+                  <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="20" VerticalAlignment="Top">
+                    <ToggleSwitch IsChecked="{Binding MultiCheckEnabled}" VerticalAlignment="Center" Margin="0,20,0,0" />
+                    <StackPanel Spacing="6">
+                      <TextBlock Text="Количество попыток" FontSize="11" Foreground="#9CA4B6" />
+                      <NumericUpDown Value="{Binding DiagnosticAttempts}"
+                                     Minimum="2"
+                                     Maximum="10"
+                                     Increment="1"
+                                     FormatString="0"
+                                     Width="148"
+                                     Height="38"
+                                     HorizontalContentAlignment="Center"
+                                     IsEnabled="{Binding IsDiagnosticAttemptsEnabled}" />
+                    </StackPanel>
+                  </StackPanel>
+                </Grid>
+              </Border>
+              <Border Classes="card" Background="#121722"><StackPanel Spacing="7"><TextBlock Text="Принцип безопасности" Classes="sectionTitle" /><TextBlock Text="NetBypass управляет только собственным блоком записей и не затрагивает пользовательские строки hosts. Перед применением адреса проходят сетевую проверку." Classes="subtitle" TextWrapping="Wrap" /></StackPanel></Border>
+            </StackPanel>
+          </ScrollViewer>
         </Grid>
       </Grid>
     </Grid>

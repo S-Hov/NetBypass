@@ -46,6 +46,8 @@ public sealed class MainViewModel : ObservableObject
     private bool _isGoodbyeDpiRuntimeEnabled;
     private string _engineOperationMessage = string.Empty;
     private bool _startWithWindows;
+    private bool _multiCheckEnabled;
+    private int _diagnosticAttempts;
     private bool _isStartupSettingBusy;
     private string _startupOperationMessage = string.Empty;
     private HashSet<string> _unavailableServiceIds = new(StringComparer.OrdinalIgnoreCase);
@@ -69,6 +71,8 @@ public sealed class MainViewModel : ObservableObject
         _isGoodbyeDpiInstalled = _goodbyeDpiInstallService.IsInstalled();
         _isGoodbyeDpiRuntimeEnabled = _goodbyeDpiRuntimeService.IsEnabled();
         _startWithWindows = settings?.StartWithWindows ?? false;
+        _multiCheckEnabled = settings?.MultiCheckEnabled ?? true;
+        _diagnosticAttempts = Math.Clamp(settings?.DiagnosticAttempts ?? 3, 2, 10);
 
         Services = new ObservableCollection<ServiceItemViewModel>(
             profiles.Select(profile => new ServiceItemViewModel(
@@ -340,6 +344,31 @@ public sealed class MainViewModel : ObservableObject
     public string StartupStatus => StartWithWindows
         ? "Включён: после входа в Windows NetBypass незаметно восстановит выбранные движки."
         : "Выключен: после перезагрузки внешние движки нужно будет включить вручную.";
+    public bool MultiCheckEnabled
+    {
+        get => _multiCheckEnabled;
+        set
+        {
+            if (!SetProperty(ref _multiCheckEnabled, value))
+                return;
+
+            OnPropertyChanged(nameof(IsDiagnosticAttemptsEnabled));
+            SaveDiagnosticSettings();
+        }
+    }
+    public int DiagnosticAttempts
+    {
+        get => _diagnosticAttempts;
+        set
+        {
+            var normalized = Math.Clamp(value, 2, 10);
+            if (!SetProperty(ref _diagnosticAttempts, normalized))
+                return;
+
+            SaveDiagnosticSettings();
+        }
+    }
+    public bool IsDiagnosticAttemptsEnabled => MultiCheckEnabled;
     public int SelectedServiceCount => Services.Count(item => item.IsSelected);
     public int AvailableServiceCount
     {
@@ -967,42 +996,83 @@ public sealed class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(HasLiveActivity));
         var progress = new Progress<NetworkDiagnosticProgress>(UpdateServiceActivity);
         var previousSelections = _endpointSelectionStore.Load();
-
-        using var semaphore = new SemaphoreSlim(6);
-        var pending = selected.Select(async item =>
-        {
-            await semaphore.WaitAsync();
-            try
-            {
-                previousSelections.TryGetValue(item.Profile.Id, out var previousSelection);
-                var result = await _diagnosticService.DiagnoseAsync(
-                    item.Profile,
-                    previousSelection,
-                    progress);
-                return (Item: item, Result: result);
-            }
-            finally
-            {
-                semaphore.Release();
-            }
-        }).ToList();
-
         var results = new List<ServiceDiagnosticResult>(selected.Count);
-        while (pending.Count > 0)
+        var pendingItems = selected.ToList();
+        var maximumAttempts = MultiCheckEnabled ? DiagnosticAttempts : 1;
+
+        for (var attempt = 1; pendingItems.Count > 0; attempt++)
         {
-            var completedTask = await Task.WhenAny(pending);
-            pending.Remove(completedTask);
-            var completed = await completedTask;
-            results.Add(completed.Result);
-            DiagnosticCompleted++;
-            CurrentDiagnosticService = completed.Item.Name;
-            Diagnostics.Add(new DiagnosticItemViewModel(completed.Result));
-            ServiceActivity.First(item => item.ServiceId == completed.Item.Profile.Id)
-                .Complete(completed.Result);
+            if (attempt > 1)
+            {
+                var delay = DiagnosticRetryPolicy.DelayBeforeAttempt(attempt);
+                CurrentDiagnosticService =
+                    $"повтор {attempt} из {maximumAttempts} через {delay.TotalSeconds:0.#} с";
+                await Task.Delay(delay);
+            }
+
+            using var semaphore = new SemaphoreSlim(6);
+            var pendingTasks = pendingItems.Select(async item =>
+            {
+                await semaphore.WaitAsync();
+                try
+                {
+                    previousSelections.TryGetValue(item.Profile.Id, out var previousSelection);
+                    var result = await _diagnosticService.DiagnoseAsync(
+                        item.Profile,
+                        previousSelection,
+                        progress);
+                    return (Item: item, Result: result with
+                    {
+                        AttemptCount = attempt,
+                        MaximumAttempts = maximumAttempts
+                    });
+                }
+                finally
+                {
+                    semaphore.Release();
+                }
+            }).ToList();
+
+            var retryItems = new List<ServiceItemViewModel>();
+            while (pendingTasks.Count > 0)
+            {
+                var completedTask = await Task.WhenAny(pendingTasks);
+                pendingTasks.Remove(completedTask);
+                var completed = await completedTask;
+                CurrentDiagnosticService = completed.Item.Name;
+
+                if (DiagnosticRetryPolicy.ShouldRetry(
+                        completed.Result,
+                        attempt,
+                        maximumAttempts))
+                {
+                    retryItems.Add(completed.Item);
+                    continue;
+                }
+
+                results.Add(completed.Result);
+                DiagnosticCompleted++;
+                Diagnostics.Add(new DiagnosticItemViewModel(completed.Result));
+                ServiceActivity.First(item => item.ServiceId == completed.Item.Profile.Id)
+                    .Complete(completed.Result);
+            }
+
+            pendingItems = retryItems;
         }
 
         CurrentDiagnosticService = string.Empty;
         return results;
+    }
+
+    private void SaveDiagnosticSettings()
+    {
+        _settingsService.Save(
+            Services.Where(item => item.IsSelected).Select(item => item.Module.Id),
+            IsGoodbyeDpiInstalled
+                ? AntiDpiServices.Where(item => item.IsSelected).Select(item => item.Id)
+                : [],
+            multiCheckEnabled: MultiCheckEnabled,
+            diagnosticAttempts: DiagnosticAttempts);
     }
 
     private void UpdateServiceActivity(NetworkDiagnosticProgress progress)

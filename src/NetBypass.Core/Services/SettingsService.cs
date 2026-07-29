@@ -5,7 +5,9 @@ namespace NetBypass.Core.Services;
 public sealed record AppSettings(
     HashSet<string>? SelectedModuleIds,
     HashSet<string>? SelectedAntiDpiServiceIds = null,
-    bool StartWithWindows = false);
+    bool StartWithWindows = false,
+    bool MultiCheckEnabled = true,
+    int DiagnosticAttempts = 3);
 
 public sealed class SettingsService
 {
@@ -37,14 +39,24 @@ public sealed class SettingsService
     public void Save(
         IEnumerable<string> selectedIds,
         IEnumerable<string>? selectedAntiDpiServiceIds = null,
-        bool? startWithWindows = null)
+        bool? startWithWindows = null,
+        bool? multiCheckEnabled = null,
+        int? diagnosticAttempts = null)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
-        var effectiveStartWithWindows = startWithWindows ?? Load()?.StartWithWindows ?? false;
+        var current = Load();
+        var effectiveStartWithWindows = startWithWindows ?? current?.StartWithWindows ?? false;
+        var effectiveMultiCheckEnabled = multiCheckEnabled ?? current?.MultiCheckEnabled ?? true;
+        var effectiveDiagnosticAttempts = Math.Clamp(
+            diagnosticAttempts ?? current?.DiagnosticAttempts ?? 3,
+            2,
+            10);
         var settings = new AppSettings(
             selectedIds.ToHashSet(StringComparer.OrdinalIgnoreCase),
             selectedAntiDpiServiceIds?.ToHashSet(StringComparer.OrdinalIgnoreCase),
-            effectiveStartWithWindows);
+            effectiveStartWithWindows,
+            effectiveMultiCheckEnabled,
+            effectiveDiagnosticAttempts);
         File.WriteAllText(_path, JsonSerializer.Serialize(settings, JsonOptions));
     }
 }

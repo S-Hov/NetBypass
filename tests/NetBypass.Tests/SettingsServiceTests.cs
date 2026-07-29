@@ -20,6 +20,8 @@ public sealed class SettingsServiceTests
         Assert.Contains("youtube", loaded.SelectedAntiDpiServiceIds!);
         Assert.Contains("discord", loaded.SelectedAntiDpiServiceIds!);
         Assert.True(loaded.StartWithWindows);
+        Assert.True(loaded.MultiCheckEnabled);
+        Assert.Equal(3, loaded.DiagnosticAttempts);
     }
 
     [Fact]
@@ -40,6 +42,8 @@ public sealed class SettingsServiceTests
         Assert.Contains("openai", loaded.SelectedModuleIds!);
         Assert.Null(loaded.SelectedAntiDpiServiceIds);
         Assert.False(loaded.StartWithWindows);
+        Assert.True(loaded.MultiCheckEnabled);
+        Assert.Equal(3, loaded.DiagnosticAttempts);
     }
 
     [Fact]
@@ -55,5 +59,36 @@ public sealed class SettingsServiceTests
         Assert.NotNull(loaded);
         Assert.True(loaded.StartWithWindows);
         Assert.Contains("discord", loaded.SelectedModuleIds!);
+    }
+
+    [Fact]
+    public void Save_PersistsAndPreservesDiagnosticRetrySettings()
+    {
+        var path = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName(), "settings.json");
+        var service = new SettingsService(path);
+        service.Save(
+            ["openai"],
+            multiCheckEnabled: false,
+            diagnosticAttempts: 5);
+
+        service.Save(["discord"]);
+        var loaded = service.Load();
+
+        Assert.NotNull(loaded);
+        Assert.False(loaded.MultiCheckEnabled);
+        Assert.Equal(5, loaded.DiagnosticAttempts);
+    }
+
+    [Theory]
+    [InlineData(1, 2)]
+    [InlineData(20, 10)]
+    public void Save_ClampsDiagnosticAttempts(int value, int expected)
+    {
+        var path = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName(), "settings.json");
+        var service = new SettingsService(path);
+
+        service.Save(["openai"], diagnosticAttempts: value);
+
+        Assert.Equal(expected, service.Load()!.DiagnosticAttempts);
     }
 }

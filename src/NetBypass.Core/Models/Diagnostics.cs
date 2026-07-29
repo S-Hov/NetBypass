@@ -43,12 +43,20 @@ public sealed record ServiceDiagnosticResult(
     string? SelectedAddress = null,
     string? SelectionReason = null,
     bool UsedPreviousSelection = false,
-    IReadOnlyList<EndpointCandidateResult>? Candidates = null)
+    IReadOnlyList<EndpointCandidateResult>? Candidates = null,
+    int AttemptCount = 1,
+    int MaximumAttempts = 1)
 {
-    public string Summary => IsReachable
+    private string BaseSummary => IsReachable
         ? SelectionReason ?? "TCP и TLS доступны"
         : Probes.LastOrDefault(probe => probe.Status == ProbeStatus.Failed)?.Message
           ?? "Проверка не пройдена";
+
+    public string Summary => IsReachable && AttemptCount > 1
+        ? $"{BaseSummary} Сервис доступен с {AttemptCount}-й попытки."
+        : !IsReachable && MaximumAttempts > 1
+            ? $"{BaseSummary} Выполнено попыток: {AttemptCount} из {MaximumAttempts}."
+            : BaseSummary;
 }
 
 public sealed record DiagnosticSnapshot(

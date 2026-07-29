@@ -332,6 +332,9 @@ public interface IExternalBypassEngine
 
 ## 8. Порядок интеграции движков
 
+Детальный архитектурный проект интеграции второй версии zapret для Windows
+находится в [`zapret2-integration-architecture.md`](zapret2-integration-architecture.md).
+
 ### GoodbyeDPI / ByeDPI первым
 
 GoodbyeDPI и ByeDPI подходят как первый внешний движок, потому что они проще для

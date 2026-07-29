@@ -100,6 +100,7 @@ NetBypass при следующем запуске сам проверит фа�
 - [Сборка и публикация релиза](docs/releasing.md)
 - [Чеклист релиза](docs/release-checklist.md)
 - [Адаптивная архитектура и план развития](docs/adaptive-architecture.md)
+- [Архитектура интеграции zapret2](docs/zapret2-integration-architecture.md)
 - [Changelog](CHANGELOG.md)
 - [Third-party notices](THIRD_PARTY_NOTICES.md)
 - [Security policy](SECURITY.md)

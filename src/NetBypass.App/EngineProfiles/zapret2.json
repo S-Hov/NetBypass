@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 1,
+  "catalogVersion": 1,
+  "engine": "zapret2",
+  "engineVersion": "1.0.3",
+  "profiles": [
+    {
+      "id": "z2-tls-multisplit-first-byte",
+      "name": "TLS Multisplit · первый байт",
+      "arguments": ["--filter-tcp=443", "--filter-l7=tls", "--hostlist={hostlist}", "--out-range=-d10", "--payload=tls_client_hello", "--lua-desync=multisplit:pos=1"],
+      "priority": 10,
+      "risk": "low",
+      "supportsQuic": false
+    },
+    {
+      "id": "z2-tls-multisplit-sni",
+      "name": "TLS Multisplit · SNI",
+      "arguments": ["--filter-tcp=443", "--filter-l7=tls", "--hostlist={hostlist}", "--out-range=-d10", "--payload=tls_client_hello", "--lua-desync=multisplit:pos=1,midsld"],
+      "priority": 20,
+      "risk": "low",
+      "supportsQuic": false
+    },
+    {
+      "id": "z2-tls-multidisorder-sni",
+      "name": "TLS Multidisorder · SNI",
+      "arguments": ["--filter-tcp=443", "--filter-l7=tls", "--hostlist={hostlist}", "--out-range=-d10", "--payload=tls_client_hello", "--lua-desync=multidisorder:pos=1,midsld"],
+      "priority": 30,
+      "risk": "low",
+      "supportsQuic": false
+    },
+    {
+      "id": "z2-tls-fake-autottl",
+      "name": "TLS Fake · Auto TTL",
+      "arguments": ["--filter-tcp=443", "--filter-l7=tls", "--hostlist={hostlist}", "--out-range=-d10", "--payload=tls_client_hello", "--lua-desync=fake:blob=fake_default_tls:ip_autottl=-2,3-20:ip6_autottl=-2,3-20:tls_mod=rnd,rndsni", "--lua-desync=fakedsplit:ip_autottl=-2,3-20:ip6_autottl=-2,3-20"],
+      "priority": 40,
+      "risk": "medium",
+      "supportsQuic": false
+    },
+    {
+      "id": "z2-tls-fake-md5-multisplit",
+      "name": "TLS Fake MD5 · Multisplit",
+      "arguments": ["--filter-tcp=443", "--filter-l7=tls", "--hostlist={hostlist}", "--out-range=-d10", "--payload=tls_client_hello", "--lua-desync=fake:blob=fake_default_tls:tcp_md5:tls_mod=rnd,rndsni", "--lua-desync=multisplit:pos=1,midsld"],
+      "priority": 50,
+      "risk": "medium",
+      "supportsQuic": false
+    },
+    {
+      "id": "z2-tls-fake-md5-multidisorder",
+      "name": "TLS Fake MD5 · Multidisorder",
+      "arguments": ["--filter-tcp=443", "--filter-l7=tls", "--hostlist={hostlist}", "--out-range=-d10", "--payload=tls_client_hello", "--lua-desync=fake:blob=fake_default_tls:tcp_md5:tls_mod=rnd,rndsni", "--lua-desync=multidisorder:pos=1,midsld"],
+      "priority": 60,
+      "risk": "medium",
+      "supportsQuic": false
+    },
+    {
+      "id": "z2-tls-fake-seq-multisplit",
+      "name": "TLS Fake Sequence · Multisplit",
+      "arguments": ["--filter-tcp=443", "--filter-l7=tls", "--hostlist={hostlist}", "--out-range=-d10", "--payload=tls_client_hello", "--lua-desync=fake:blob=fake_default_tls:tcp_md5:tcp_seq=-10000:repeats=6", "--lua-desync=multisplit:pos=midsld"],
+      "priority": 70,
+      "risk": "medium",
+      "supportsQuic": false
+    },
+    {
+      "id": "z2-tls-fake-seq-multidisorder",
+      "name": "TLS Fake Sequence · Multidisorder",
+      "arguments": ["--filter-tcp=443", "--filter-l7=tls", "--hostlist={hostlist}", "--out-range=-d10", "--payload=tls_client_hello", "--lua-desync=fake:blob=fake_default_tls:tcp_md5:tcp_seq=-10000:repeats=6", "--lua-desync=multidisorder:pos=midsld"],
+      "priority": 80,
+      "risk": "medium",
+      "supportsQuic": false
+    },
+    {
+      "id": "z2-tls-fake-repeat11",
+      "name": "TLS Fake · 11 повторов",
+      "arguments": ["--filter-tcp=443", "--filter-l7=tls", "--hostlist={hostlist}", "--out-range=-d10", "--payload=tls_client_hello", "--lua-desync=fake:blob=fake_default_tls:tcp_md5:repeats=11:tls_mod=rnd,dupsid", "--lua-desync=multidisorder:pos=1,midsld"],
+      "priority": 90,
+      "risk": "high",
+      "supportsQuic": false
+    },
+    {
+      "id": "z2-tls-fake-google-sni",
+      "name": "TLS Fake · Google SNI",
+      "arguments": ["--filter-tcp=443", "--filter-l7=tls", "--hostlist={hostlist}", "--out-range=-d10", "--payload=tls_client_hello", "--lua-desync=fake:blob=fake_default_tls:tcp_md5:repeats=11:tls_mod=rnd,dupsid,sni=www.google.com", "--lua-desync=multidisorder:pos=1,midsld"],
+      "priority": 100,
+      "risk": "high",
+      "supportsQuic": false
+    }
+  ],
+  "targets": [
+    {
+      "serviceId": "youtube",
+      "name": "YouTube",
+      "host": "www.youtube.com",
+      "port": 443,
+      "acceptedHttpStatuses": [200, 204, 301, 302, 303, 307, 308],
+      "isControl": false,
+      "candidateHosts": ["www.google.com", "www.gstatic.com"]
+    },
+    {
+      "serviceId": "discord",
+      "name": "Discord",
+      "host": "discord.com",
+      "port": 443,
+      "acceptedHttpStatuses": [200, 204, 301, 302, 303, 307, 308],
+      "isControl": false,
+      "candidateHosts": ["www.cloudflare.com", "one.one.one.one"]
+    },
+    {
+      "serviceId": "control-google",
+      "name": "Контрольный Google",
+      "host": "www.google.com",
+      "port": 443,
+      "acceptedHttpStatuses": [200, 204, 301, 302, 303, 307, 308],
+      "isControl": true,
+      "candidateHosts": []
+    }
+  ]
+}

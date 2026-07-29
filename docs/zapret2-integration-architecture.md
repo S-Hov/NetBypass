@@ -1,6 +1,6 @@
 # Интеграция zapret2 в NetBypass
 
-Статус: архитектурный проект, реализация ещё не начата.  
+Статус: базовая интеграция реализована; service/journal и UDP/QUIC остаются следующими этапами.
 Дата исследования: 29 июля 2026 года.
 
 ## 1. Цель
@@ -50,8 +50,8 @@ WinDivert и лицензионных файлов.
   перехвата проходящего трафика.
 
 На дату исследования последним релизом официального репозитория отображался
-`v0.9.5.2`. Эта версия зафиксирована только как результат исследования, а не
-как автоматическое правило «всегда скачивать latest».
+`v1.0.3`. NetBypass фиксирует эту конкретную версию и её SHA-256, а не скачивает
+непроверенный `latest`.
 
 ## 3. Продуктовые решения
 
@@ -162,14 +162,11 @@ commit, а не изменяемая ветка `master`.
 
 ```text
 %LOCALAPPDATA%\NetBypass\Engines\zapret2\
-├── package-manifest.json
-└── 0.9.5.2\
-    ├── winws2.exe
-    ├── cygwin1.dll
-    ├── WinDivert.dll
-    ├── WinDivert64.sys
-    ├── lua\
-    ├── files\
+└── current\
+    └── zapret2-v1.0.3\
+        ├── binaries\windows-x86_64\
+        ├── lua\
+        └── files\
     └── licenses\
 
 %LOCALAPPDATA%\NetBypass\Runtime\zapret2\
@@ -207,7 +204,7 @@ Installer обязан:
   "schemaVersion": 1,
   "catalogVersion": 1,
   "engine": "zapret2",
-  "engineVersion": "0.9.5.2",
+  "engineVersion": "1.0.3",
   "luaCompatibility": 1,
   "profiles": [
     {
@@ -343,7 +340,7 @@ cleanup: чужой или существовавший до запуска др
   "schemaVersion": 1,
   "operationId": "...",
   "engine": "zapret2",
-  "engineVersion": "0.9.5.2",
+  "engineVersion": "1.0.3",
   "state": "RunningVerified",
   "service": {
     "name": "NetBypassZapret2",
@@ -599,4 +596,3 @@ Windows VM:
 - [Реализация Windows-службы winws2](https://github.com/bol-van/zapret2/blob/master/nfq2/win.c)
 - [Windows packet loop и разбор конфигурации](https://github.com/bol-van/zapret2/blob/master/nfq2/nfqws.c)
 - [Лицензия zapret2](https://github.com/bol-van/zapret2/blob/master/LICENSE)
-

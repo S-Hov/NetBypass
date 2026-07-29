@@ -2,11 +2,13 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using NetBypass.App.ViewModels;
+using System.Windows.Input;
 
 namespace NetBypass.App;
 
 public partial class MainWindow : Window
 {
+    private ICommand? _pendingEngineRemoval;
     private Border RestoreOverlay => this.FindControl<Border>(nameof(RestoreOverlay))!;
     private Border RemoveEngineOverlay => this.FindControl<Border>(nameof(RemoveEngineOverlay))!;
 
@@ -43,19 +45,24 @@ public partial class MainWindow : Window
             viewModel.RestoreConfirmed();
     }
 
-    private void RemoveEngine_Click(object? sender, RoutedEventArgs e) =>
-        RemoveEngineOverlay.IsVisible = true;
+    private void RemoveEngine_Click(object? sender, RoutedEventArgs e)
+    {
+        _pendingEngineRemoval = (sender as Button)?.Tag as ICommand;
+        RemoveEngineOverlay.IsVisible = _pendingEngineRemoval is not null;
+    }
 
-    private void CancelRemoveEngine_Click(object? sender, RoutedEventArgs e) =>
+    private void CancelRemoveEngine_Click(object? sender, RoutedEventArgs e)
+    {
         RemoveEngineOverlay.IsVisible = false;
+        _pendingEngineRemoval = null;
+    }
 
     private void ConfirmRemoveEngine_Click(object? sender, RoutedEventArgs e)
     {
         RemoveEngineOverlay.IsVisible = false;
-        if (DataContext is MainViewModel viewModel
-            && viewModel.RemoveGoodbyeDpiCommand.CanExecute(null))
-        {
-            viewModel.RemoveGoodbyeDpiCommand.Execute(null);
-        }
+        var command = _pendingEngineRemoval;
+        _pendingEngineRemoval = null;
+        if (command?.CanExecute(null) == true)
+            command.Execute(null);
     }
 }

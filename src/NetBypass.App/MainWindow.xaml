@@ -1,7 +1,7 @@
 <Window x:Class="NetBypass.App.MainWindow"
         xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="NetBypass" Width="1180" Height="760"
+        Title="NetBypass" Icon="/Assets/NetBypass.ico" Width="1180" Height="760"
         MinWidth="940" MinHeight="640"
         WindowStartupLocation="CenterScreen"
         Background="#090B12" TransparencyLevelHint="Mica,Blur">
@@ -124,7 +124,7 @@
       <Border Grid.Column="0" Background="#0E111A" BorderBrush="#202534" BorderThickness="0,0,1,0">
         <Grid Margin="20,24" RowDefinitions="Auto,Auto,*,Auto">
           <StackPanel Orientation="Horizontal" Spacing="11">
-            <TextBlock Text="N" Width="38" FontSize="31" FontWeight="Black" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" />
+            <Image Source="/Assets/NetBypass.png" Width="42" Height="42" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" />
             <StackPanel VerticalAlignment="Center" Spacing="1">
               <TextBlock Text="NetBypass" FontSize="18" FontWeight="Bold" />
               <TextBlock Text="NETWORK CONTROL" FontSize="8" LetterSpacing="1.6" Foreground="#6F778A" />
@@ -221,7 +221,7 @@
                     <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Быстрый обзор" Classes="sectionTitle" /><TextBlock Grid.Column="1" Text="01" Classes="eyebrow" Foreground="#555E72" /></Grid>
                     <Border Height="1" Background="{StaticResource LineBrush}" />
                     <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Выбрано сервисов" Classes="subtitle" /><TextBlock Grid.Column="1" Text="{Binding SelectedServiceCount}" FontSize="19" FontWeight="Bold" /></Grid>
-                    <Grid ColumnDefinitions="*,Auto"><TextBlock Text="GoodbyeDPI" Classes="subtitle" /><TextBlock Grid.Column="1" Text="{Binding GoodbyeDpiRuntimeStatus}" MaxWidth="155" TextWrapping="Wrap" TextAlignment="Right" FontSize="10" Foreground="#9DA5B8" /></Grid>
+                    <Grid ColumnDefinitions="*,Auto"><TextBlock Text="{Binding ActiveAntiDpiEngineName}" Classes="subtitle" /><TextBlock Grid.Column="1" Text="{Binding AntiDpiRuntimeStatus}" MaxWidth="185" TextWrapping="Wrap" TextAlignment="Right" FontSize="10" Foreground="#9DA5B8" /></Grid>
                   </StackPanel>
                 </Border>
                 <Border Classes="card" Background="#17152A" BorderBrush="#38305D">
@@ -279,7 +279,7 @@
                 <Border Grid.Column="1" Background="#11141E" BorderBrush="#252B3A" BorderThickness="1,0,0,0" Padding="20">
                   <StackPanel Spacing="13">
                     <Grid ColumnDefinitions="*,Auto">
-                      <StackPanel Spacing="3"><TextBlock Text="Движок" Classes="sectionTitle" /><TextBlock Text="Стратегии GoodbyeDPI" Classes="subtitle" FontSize="11" /></StackPanel>
+                      <StackPanel Spacing="3"><TextBlock Text="Движок" Classes="sectionTitle" /><TextBlock Text="Стратегии движка" Classes="subtitle" FontSize="11" /></StackPanel>
                       <Border Grid.Column="1" Width="9" Height="9" CornerRadius="5" Background="{Binding StateAccent}" VerticalAlignment="Top" Margin="0,7,0,0" />
                     </Grid>
                     <TextBlock Text="Движок не участвовал в последней операции." IsVisible="{Binding HasNoEngineActivityLog}" Classes="subtitle" TextWrapping="Wrap" Margin="0,12" />
@@ -314,7 +314,7 @@
                     <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate><DataTemplate><Border Classes="serviceCard" Width="260" Margin="0,0,10,10" Padding="15" CornerRadius="13" Background="#131723" BorderBrush="#2B3040" BorderThickness="1"><CheckBox IsChecked="{Binding IsSelected}"><StackPanel Margin="7,0,0,0" Spacing="3"><TextBlock Text="{Binding Name}" FontWeight="SemiBold" /><TextBlock Text="{Binding Description}" Width="195" TextWrapping="Wrap" FontSize="10" Foreground="{StaticResource MutedBrush}" /><TextBlock Text="{Binding EngineName}" FontSize="9" Foreground="#8B7CFF" /></StackPanel></CheckBox></Border></DataTemplate></ItemsControl.ItemTemplate>
                   </ItemsControl>
-                  <Button IsVisible="{Binding IsAntiDpiEngineMissing}" Classes="primary" Content="Скачать GoodbyeDPI" Command="{Binding DownloadGoodbyeDpiCommand}" HorizontalAlignment="Left" />
+                  <Button IsVisible="{Binding IsAntiDpiEngineMissing}" Classes="primary" Content="Выбрать и скачать движок" Command="{Binding ShowEnginesCommand}" HorizontalAlignment="Left" />
                 </StackPanel>
               </Border>
               <ItemsControl ItemsSource="{Binding Services}">
@@ -341,7 +341,7 @@
           <ScrollViewer Grid.Row="1">
             <StackPanel Margin="38,0,38,40" Spacing="16">
               <Border Classes="card" Background="#17152A">
-                <StackPanel Spacing="6"><TextBlock Text="Anti-DPI runtime" Classes="sectionTitle" /><TextBlock Text="{Binding GoodbyeDpiRuntimeStatus}" Classes="subtitle" TextWrapping="Wrap" /><TextBlock Text="{Binding EngineOperationMessage}" IsVisible="{Binding HasEngineOperationMessage}" Foreground="#C9C1FF" TextWrapping="Wrap" /></StackPanel>
+                <StackPanel Spacing="6"><TextBlock Text="Anti-DPI runtime" Classes="sectionTitle" /><TextBlock Text="{Binding AntiDpiRuntimeStatus}" Classes="subtitle" TextWrapping="Wrap" /><TextBlock Text="{Binding EngineOperationMessage}" IsVisible="{Binding HasEngineOperationMessage}" Foreground="#C9C1FF" TextWrapping="Wrap" /></StackPanel>
               </Border>
               <ItemsControl ItemsSource="{Binding Engines}">
                 <ItemsControl.ItemTemplate>
@@ -354,8 +354,9 @@
                         <Grid Grid.Row="2" Margin="0,14,0,0" ColumnDefinitions="*,Auto">
                           <TextBlock Text="{Binding NextStep}" Classes="subtitle" VerticalAlignment="Center" TextWrapping="Wrap" />
                           <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="9">
-                            <Button Classes="primary" Content="Скачать движок" IsVisible="{Binding ShowDownloadButton}" Command="{Binding $parent[Window].DataContext.DownloadGoodbyeDpiCommand}" />
-                            <Button Classes="danger" Content="Удалить движок" IsVisible="{Binding ShowRemoveButton}" Click="RemoveEngine_Click" />
+                            <Button Content="Использовать" IsVisible="{Binding ShowSelectButton}" Command="{Binding SelectCommand}" />
+                            <Button Classes="primary" Content="Скачать движок" IsVisible="{Binding ShowDownloadButton}" Command="{Binding DownloadCommand}" />
+                            <Button Classes="danger" Content="Удалить движок" IsVisible="{Binding ShowRemoveButton}" Tag="{Binding RemoveCommand}" Click="RemoveEngine_Click" />
                           </StackPanel>
                         </Grid>
                       </Grid>
@@ -425,7 +426,7 @@
       <Border Classes="card" Width="430" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="26" Background="#161A26" BorderBrush="#483342">
         <StackPanel Spacing="16">
           <Border Width="52" Height="52" CornerRadius="26" Background="#2B1921" HorizontalAlignment="Left"><TextBlock Text="!" FontSize="24" FontWeight="Bold" Foreground="#FF8296" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
-          <StackPanel Spacing="7"><TextBlock Text="Удалить GoodbyeDPI?" FontSize="21" FontWeight="Bold" /><TextBlock Text="Движок будет остановлен, а его файлы и сохранённая стратегия удалены. Выбранные обычные сервисы NetBypass останутся без изменений." Classes="subtitle" TextWrapping="Wrap" /></StackPanel>
+          <StackPanel Spacing="7"><TextBlock Text="Удалить движок?" FontSize="21" FontWeight="Bold" /><TextBlock Text="Движок будет остановлен, а его файлы и сохранённая стратегия удалены. Выбранные обычные сервисы NetBypass останутся без изменений." Classes="subtitle" TextWrapping="Wrap" /></StackPanel>
           <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="9"><Button Content="Отмена" Click="CancelRemoveEngine_Click" /><Button Classes="danger" Content="Да, удалить" Click="ConfirmRemoveEngine_Click" /></StackPanel>
         </StackPanel>
       </Border>

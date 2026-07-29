@@ -1,8 +1,10 @@
 using NetBypass.Core.Models;
+using System.Windows.Input;
 
 namespace NetBypass.App.ViewModels;
 
 public sealed class EngineCardViewModel(
+    string id,
     string name,
     BypassEngineKind kind,
     string state,
@@ -11,8 +13,13 @@ public sealed class EngineCardViewModel(
     string description,
     string nextStep,
     bool showDownloadButton = false,
-    bool showRemoveButton = false)
+    bool showRemoveButton = false,
+    bool isSelected = false,
+    ICommand? downloadCommand = null,
+    ICommand? removeCommand = null,
+    ICommand? selectCommand = null)
 {
+    public string Id => id;
     public string Name => name;
     public BypassEngineKind Kind => kind;
     public string Category => kind switch
@@ -30,4 +37,10 @@ public sealed class EngineCardViewModel(
     public string NextStep => nextStep;
     public bool ShowDownloadButton => showDownloadButton;
     public bool ShowRemoveButton => showRemoveButton;
+    public bool IsSelected => isSelected;
+    public bool ShowSelectButton => IsEnabled && !IsSelected && selectCommand is not null;
+    public string SelectButtonText => IsSelected ? "Используется" : "Использовать";
+    public ICommand? DownloadCommand => downloadCommand;
+    public ICommand? RemoveCommand => removeCommand;
+    public ICommand? SelectCommand => selectCommand;
 }

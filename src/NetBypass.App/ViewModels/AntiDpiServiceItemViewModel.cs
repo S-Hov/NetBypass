@@ -10,10 +10,15 @@ public sealed class AntiDpiServiceItemViewModel(
     bool isSelected) : ObservableObject
 {
     private bool _isSelected = isSelected;
+    private string _engineName = engineName;
 
     public string Id => id;
     public string Name => name;
-    public string EngineName => engineName;
+    public string EngineName
+    {
+        get => _engineName;
+        set => SetProperty(ref _engineName, value);
+    }
     public string Description => description;
 
     public bool IsSelected

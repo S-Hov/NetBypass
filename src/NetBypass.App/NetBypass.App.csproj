@@ -4,6 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\NetBypass.ico</ApplicationIcon>
     <AssemblyName>NetBypass</AssemblyName>
     <RootNamespace>NetBypass.App</RootNamespace>
     <Product>NetBypass</Product>
@@ -20,6 +21,8 @@
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.0" />
     <ProjectReference Include="..\NetBypass.Core\NetBypass.Core.csproj" />
     <AvaloniaResource Include="**\*.xaml" />
+    <AvaloniaResource Include="Assets\NetBypass.ico" />
+    <AvaloniaResource Include="Assets\NetBypass.png" />
     <Content Include="Modules\*.hosts">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

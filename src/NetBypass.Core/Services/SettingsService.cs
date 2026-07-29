@@ -7,7 +7,8 @@ public sealed record AppSettings(
     HashSet<string>? SelectedAntiDpiServiceIds = null,
     bool StartWithWindows = false,
     bool MultiCheckEnabled = true,
-    int DiagnosticAttempts = 3);
+    int DiagnosticAttempts = 3,
+    string SelectedAntiDpiEngineId = "goodbyedpi");
 
 public sealed class SettingsService
 {
@@ -41,7 +42,8 @@ public sealed class SettingsService
         IEnumerable<string>? selectedAntiDpiServiceIds = null,
         bool? startWithWindows = null,
         bool? multiCheckEnabled = null,
-        int? diagnosticAttempts = null)
+        int? diagnosticAttempts = null,
+        string? selectedAntiDpiEngineId = null)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
         var current = Load();
@@ -51,12 +53,20 @@ public sealed class SettingsService
             diagnosticAttempts ?? current?.DiagnosticAttempts ?? 3,
             2,
             10);
+        var effectiveAntiDpiEngineId = NormalizeEngineId(
+            selectedAntiDpiEngineId ?? current?.SelectedAntiDpiEngineId);
         var settings = new AppSettings(
             selectedIds.ToHashSet(StringComparer.OrdinalIgnoreCase),
             selectedAntiDpiServiceIds?.ToHashSet(StringComparer.OrdinalIgnoreCase),
             effectiveStartWithWindows,
             effectiveMultiCheckEnabled,
-            effectiveDiagnosticAttempts);
+            effectiveDiagnosticAttempts,
+            effectiveAntiDpiEngineId);
         File.WriteAllText(_path, JsonSerializer.Serialize(settings, JsonOptions));
     }
+
+    private static string NormalizeEngineId(string? engineId) =>
+        string.Equals(engineId, "zapret2", StringComparison.OrdinalIgnoreCase)
+            ? "zapret2"
+            : "goodbyedpi";
 }

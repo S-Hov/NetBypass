@@ -22,6 +22,19 @@ public sealed class SettingsServiceTests
         Assert.True(loaded.StartWithWindows);
         Assert.True(loaded.MultiCheckEnabled);
         Assert.Equal(3, loaded.DiagnosticAttempts);
+        Assert.Equal("goodbyedpi", loaded.SelectedAntiDpiEngineId);
+    }
+
+    [Fact]
+    public void Save_PersistsSelectedAntiDpiEngine()
+    {
+        var path = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName(), "settings.json");
+        var service = new SettingsService(path);
+
+        service.Save(["openai"], selectedAntiDpiEngineId: "zapret2");
+        service.Save(["discord"]);
+
+        Assert.Equal("zapret2", service.Load()!.SelectedAntiDpiEngineId);
     }
 
     [Fact]

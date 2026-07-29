@@ -28,8 +28,11 @@ public sealed class AntiDpiStrategyCatalogService
     {
         if (catalog.SchemaVersion != 1)
             throw new InvalidDataException($"Версия схемы стратегий {catalog.SchemaVersion} не поддерживается.");
-        if (!string.Equals(catalog.Engine, "goodbyedpi", StringComparison.OrdinalIgnoreCase))
-            throw new InvalidDataException("Сейчас поддерживается каталог только для GoodbyeDPI.");
+        if (!string.Equals(catalog.Engine, "goodbyedpi", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(catalog.Engine, "zapret2", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidDataException($"Движок каталога {catalog.Engine} не поддерживается.");
+        }
         if (string.IsNullOrWhiteSpace(catalog.EngineVersion))
             throw new InvalidDataException("В каталоге не указана версия движка.");
         if (catalog.Profiles.Count == 0)
@@ -54,8 +57,8 @@ public sealed class AntiDpiStrategyCatalogService
 
             foreach (var argument in profile.Arguments)
             {
-                if (argument.Contains('{')
-                    && !string.Equals(argument, "{blacklist}", StringComparison.OrdinalIgnoreCase))
+                if ((argument.Contains('{') || argument.Contains('}'))
+                    && !ContainsKnownTemplate(catalog.Engine, argument))
                 {
                     throw new InvalidDataException(
                         $"Стратегия {profile.Id} содержит неизвестный шаблон: {argument}.");
@@ -68,6 +71,17 @@ public sealed class AntiDpiStrategyCatalogService
             .FirstOrDefault(group => group.Count() > 1);
         if (duplicateTarget is not null)
             throw new InvalidDataException($"Цель {duplicateTarget.Key} объявлена несколько раз.");
+    }
+
+    private static bool ContainsKnownTemplate(string engine, string argument)
+    {
+        var knownTemplates = string.Equals(engine, "goodbyedpi", StringComparison.OrdinalIgnoreCase)
+            ? new[] { "{blacklist}" }
+            : new[] { "{hostlist}", "{quic-blob}" };
+        var remainder = argument;
+        foreach (var template in knownTemplates)
+            remainder = remainder.Replace(template, string.Empty, StringComparison.OrdinalIgnoreCase);
+        return !remainder.Contains('{') && !remainder.Contains('}');
     }
 }
 

@@ -20,6 +20,7 @@ DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
 OutputDir=..\artifacts\release
 OutputBaseFilename=NetBypass-Setup-v{#AppVersion}-win-x64
+SetupIconFile=..\src\NetBypass.App\Assets\NetBypass.ico
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern

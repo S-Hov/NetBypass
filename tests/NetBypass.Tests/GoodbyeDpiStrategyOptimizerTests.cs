@@ -74,9 +74,7 @@ public sealed class GoodbyeDpiStrategyOptimizerTests
     [Fact]
     public void CatalogService_LoadsBundledGoodbyeDpiCatalog()
     {
-        var repositoryRoot = Path.GetFullPath(Path.Combine(
-            AppContext.BaseDirectory,
-            "..", "..", "..", "..", ".."));
+        var repositoryRoot = FindRepositoryRoot();
         var path = Path.Combine(
             repositoryRoot,
             "src",
@@ -91,6 +89,42 @@ public sealed class GoodbyeDpiStrategyOptimizerTests
         Assert.True(catalog.Profiles.Count >= 6);
         Assert.Contains(catalog.Targets, target => target.ServiceId == "youtube");
         Assert.Contains(catalog.Targets, target => target.IsControl);
+    }
+
+    [Fact]
+    public void CatalogService_LoadsBundledZapret2Catalog()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var path = Path.Combine(
+            repositoryRoot,
+            "src",
+            "NetBypass.App",
+            "EngineProfiles",
+            "zapret2.json");
+
+        var catalog = new AntiDpiStrategyCatalogService().Load(path);
+
+        Assert.Equal("zapret2", catalog.Engine);
+        Assert.Equal(Zapret2InstallService.EngineVersion, catalog.EngineVersion);
+        Assert.Equal(10, catalog.Profiles.Count);
+        Assert.All(catalog.Profiles, profile => Assert.False(profile.SupportsQuic));
+        Assert.Contains(catalog.Targets, target => target.ServiceId == "discord");
+    }
+
+    private static string FindRepositoryRoot()
+    {
+        foreach (var start in new[] { Directory.GetCurrentDirectory(), AppContext.BaseDirectory })
+        {
+            var directory = new DirectoryInfo(start);
+            while (directory is not null)
+            {
+                if (File.Exists(Path.Combine(directory.FullName, "NetBypass.sln")))
+                    return directory.FullName;
+                directory = directory.Parent;
+            }
+        }
+
+        throw new DirectoryNotFoundException("Не удалось найти корень репозитория NetBypass.");
     }
 
     private static AntiDpiStrategyCatalog CreateCatalog() =>

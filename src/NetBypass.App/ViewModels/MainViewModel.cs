@@ -9,6 +9,8 @@ namespace NetBypass.App.ViewModels;
 
 public sealed class MainViewModel : ObservableObject
 {
+    private const string GoodbyeDpiEngineId = "goodbyedpi";
+    private const string Zapret2EngineId = "zapret2";
     private static readonly HashSet<string> DisabledByDefault =
     [
         "guided-hacking",
@@ -28,6 +30,14 @@ public sealed class MainViewModel : ObservableObject
     private readonly GoodbyeDpiRuntimeService _goodbyeDpiRuntimeService;
     private readonly GoodbyeDpiStrategyOptimizer _goodbyeDpiStrategyOptimizer;
     private readonly AntiDpiStrategySelectionStore _antiDpiStrategySelectionStore = new();
+    private readonly Zapret2InstallService _zapret2InstallService = new();
+    private readonly Zapret2RuntimeService _zapret2RuntimeService;
+    private readonly Zapret2StrategyOptimizer _zapret2StrategyOptimizer;
+    private readonly AntiDpiStrategySelectionStore _zapret2StrategySelectionStore = new(
+        Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "NetBypass",
+            "zapret2-strategy.json"));
     private readonly StartupTaskService _startupTaskService = new();
     private readonly NetworkDiagnosticService _diagnosticService = new(
         new CloudflareGoogleDohResolver(),
@@ -44,6 +54,9 @@ public sealed class MainViewModel : ObservableObject
     private string _cleanupTitle = string.Empty;
     private bool _isGoodbyeDpiInstalled;
     private bool _isGoodbyeDpiRuntimeEnabled;
+    private bool _isZapret2Installed;
+    private bool _isZapret2RuntimeEnabled;
+    private string _selectedAntiDpiEngineId = GoodbyeDpiEngineId;
     private string _engineOperationMessage = string.Empty;
     private bool _startWithWindows;
     private bool _multiCheckEnabled;
@@ -65,11 +78,29 @@ public sealed class MainViewModel : ObservableObject
             _goodbyeDpiRuntimeService,
             strategyCatalog,
             selectionStore: _antiDpiStrategySelectionStore);
+        _zapret2RuntimeService = new Zapret2RuntimeService(_zapret2InstallService);
+        var zapret2CatalogPath = Path.Combine(
+            AppContext.BaseDirectory,
+            "EngineProfiles",
+            "zapret2.json");
+        var zapret2Catalog = new AntiDpiStrategyCatalogService().Load(zapret2CatalogPath);
+        _zapret2StrategyOptimizer = new Zapret2StrategyOptimizer(
+            _zapret2RuntimeService,
+            zapret2Catalog,
+            selectionStore: _zapret2StrategySelectionStore);
         var modulesPath = Path.Combine(AppContext.BaseDirectory, "Modules");
         var profiles = new ServiceProfileLoader().LoadDirectory(modulesPath);
         var settings = _settingsService.Load();
         _isGoodbyeDpiInstalled = _goodbyeDpiInstallService.IsInstalled();
         _isGoodbyeDpiRuntimeEnabled = _goodbyeDpiRuntimeService.IsEnabled();
+        _isZapret2Installed = _zapret2InstallService.IsInstalled();
+        _isZapret2RuntimeEnabled = _zapret2RuntimeService.IsEnabled();
+        _selectedAntiDpiEngineId = string.Equals(
+            settings?.SelectedAntiDpiEngineId,
+            Zapret2EngineId,
+            StringComparison.OrdinalIgnoreCase)
+            ? Zapret2EngineId
+            : GoodbyeDpiEngineId;
         _startWithWindows = settings?.StartWithWindows ?? false;
         _multiCheckEnabled = settings?.MultiCheckEnabled ?? true;
         _diagnosticAttempts = Math.Clamp(settings?.DiagnosticAttempts ?? 3, 2, 10);
@@ -80,7 +111,9 @@ public sealed class MainViewModel : ObservableObject
                 settings?.SelectedModuleIds?.Contains(profile.Id)
                     ?? !DisabledByDefault.Contains(profile.Id))));
         AntiDpiServices = new ObservableCollection<AntiDpiServiceItemViewModel>(
-            CreateAntiDpiServices(settings?.SelectedAntiDpiServiceIds));
+            CreateAntiDpiServices(
+                settings?.SelectedAntiDpiServiceIds,
+                ActiveAntiDpiEngineName));
 
         foreach (var service in Services)
             service.PropertyChanged += OnServicePropertyChanged;
@@ -89,7 +122,7 @@ public sealed class MainViewModel : ObservableObject
 
         Diagnostics = new ObservableCollection<DiagnosticItemViewModel>();
         ServiceActivity = new ObservableCollection<OperationTraceItemViewModel>();
-        Engines = new ObservableCollection<EngineCardViewModel>(CreateEngineCards(IsGoodbyeDpiInstalled));
+        Engines = new ObservableCollection<EngineCardViewModel>();
         CleanupItems = new ObservableCollection<string>();
         EngineActivityLog = new ObservableCollection<string>();
         LoadStoredDiagnostics();
@@ -121,6 +154,16 @@ public sealed class MainViewModel : ObservableObject
         RemoveGoodbyeDpiCommand = new AsyncRelayCommand(
             RemoveGoodbyeDpiAsync,
             () => !IsBusy && IsGoodbyeDpiInstalled);
+        DownloadZapret2Command = new AsyncRelayCommand(
+            DownloadZapret2Async,
+            () => !IsBusy && !IsZapret2Installed);
+        RemoveZapret2Command = new AsyncRelayCommand(
+            RemoveZapret2Async,
+            () => !IsBusy && IsZapret2Installed);
+        UseGoodbyeDpiCommand = new RelayCommand(() => SelectAntiDpiEngine(GoodbyeDpiEngineId));
+        UseZapret2Command = new RelayCommand(() => SelectAntiDpiEngine(Zapret2EngineId));
+
+        RebuildEngineCards();
 
         RefreshState();
     }
@@ -145,6 +188,10 @@ public sealed class MainViewModel : ObservableObject
     public RelayCommand ShowSettingsCommand { get; }
     public AsyncRelayCommand DownloadGoodbyeDpiCommand { get; }
     public AsyncRelayCommand RemoveGoodbyeDpiCommand { get; }
+    public AsyncRelayCommand DownloadZapret2Command { get; }
+    public AsyncRelayCommand RemoveZapret2Command { get; }
+    public RelayCommand UseGoodbyeDpiCommand { get; }
+    public RelayCommand UseZapret2Command { get; }
 
     public HostsState HostsState
     {
@@ -199,6 +246,8 @@ public sealed class MainViewModel : ObservableObject
             OnPropertyChanged(nameof(DiagnosticButtonText));
             DownloadGoodbyeDpiCommand?.RaiseCanExecuteChanged();
             RemoveGoodbyeDpiCommand?.RaiseCanExecuteChanged();
+            DownloadZapret2Command?.RaiseCanExecuteChanged();
+            RemoveZapret2Command?.RaiseCanExecuteChanged();
         }
     }
 
@@ -225,7 +274,8 @@ public sealed class MainViewModel : ObservableObject
     public bool IsSettingsPage => CurrentPage == AppPage.Settings;
     public bool IsPowerOn =>
         HostsState is HostsState.Active or HostsState.ChangesPending
-        || IsGoodbyeDpiRuntimeEnabled;
+        || IsGoodbyeDpiRuntimeEnabled
+        || IsZapret2RuntimeEnabled;
     public bool IsCorrupted => HostsState == HostsState.Corrupted;
     public bool IsConnecting => PowerOperation == PowerOperation.Connecting;
     public bool IsDisconnecting => PowerOperation == PowerOperation.Disconnecting;
@@ -254,12 +304,7 @@ public sealed class MainViewModel : ObservableObject
             if (!SetProperty(ref _isGoodbyeDpiInstalled, value))
                 return;
 
-            OnPropertyChanged(nameof(IsAntiDpiServicesEnabled));
-            OnPropertyChanged(nameof(IsAntiDpiEngineMissing));
-            OnPropertyChanged(nameof(AntiDpiInstallStatus));
-            OnPropertyChanged(nameof(GoodbyeDpiRuntimeStatus));
-            OnPropertyChanged(nameof(AntiDpiSelectionSummary));
-            OnPropertyChanged(nameof(HasSelectedBypassTarget));
+            RaiseAntiDpiEngineProperties();
             DownloadGoodbyeDpiCommand?.RaiseCanExecuteChanged();
             RemoveGoodbyeDpiCommand?.RaiseCanExecuteChanged();
             RebuildEngineCards();
@@ -273,32 +318,87 @@ public sealed class MainViewModel : ObservableObject
             if (!SetProperty(ref _isGoodbyeDpiRuntimeEnabled, value))
                 return;
 
-            OnPropertyChanged(nameof(IsPowerOn));
-            OnPropertyChanged(nameof(GoodbyeDpiRuntimeStatus));
-            OnPropertyChanged(nameof(PowerButtonLabel));
+            RaiseAntiDpiEngineProperties();
             RaiseStateProperties();
         }
     }
-    public bool IsAntiDpiServicesEnabled => IsGoodbyeDpiInstalled;
-    public bool IsAntiDpiEngineMissing => !IsGoodbyeDpiInstalled;
-    public string AntiDpiInstallStatus => IsGoodbyeDpiInstalled
-        ? "GoodbyeDPI скачан. Эти сервисы могут автоматически включать Anti-DPI режим."
-        : "Чтобы включить эти сервисы, скачайте хотя бы один Anti-DPI движок.";
+    public bool IsZapret2Installed
+    {
+        get => _isZapret2Installed;
+        private set
+        {
+            if (!SetProperty(ref _isZapret2Installed, value))
+                return;
+
+            RaiseAntiDpiEngineProperties();
+            DownloadZapret2Command?.RaiseCanExecuteChanged();
+            RemoveZapret2Command?.RaiseCanExecuteChanged();
+            RebuildEngineCards();
+        }
+    }
+    public bool IsZapret2RuntimeEnabled
+    {
+        get => _isZapret2RuntimeEnabled;
+        private set
+        {
+            if (!SetProperty(ref _isZapret2RuntimeEnabled, value))
+                return;
+
+            RaiseAntiDpiEngineProperties();
+            RaiseStateProperties();
+        }
+    }
+    public string SelectedAntiDpiEngineId
+    {
+        get => _selectedAntiDpiEngineId;
+        private set
+        {
+            if (!SetProperty(ref _selectedAntiDpiEngineId, value))
+                return;
+
+            foreach (var service in AntiDpiServices)
+                service.EngineName = ActiveAntiDpiEngineName;
+            RaiseAntiDpiEngineProperties();
+            RebuildEngineCards();
+        }
+    }
+    public bool IsZapret2Selected => string.Equals(
+        SelectedAntiDpiEngineId,
+        Zapret2EngineId,
+        StringComparison.OrdinalIgnoreCase);
+    public string ActiveAntiDpiEngineName => IsZapret2Selected ? "zapret2" : "GoodbyeDPI";
+    public bool IsSelectedAntiDpiEngineInstalled =>
+        IsZapret2Selected ? IsZapret2Installed : IsGoodbyeDpiInstalled;
+    public bool IsAntiDpiServicesEnabled => IsGoodbyeDpiInstalled || IsZapret2Installed;
+    public bool IsAntiDpiEngineMissing => !IsAntiDpiServicesEnabled;
+    public string AntiDpiInstallStatus => IsSelectedAntiDpiEngineInstalled
+        ? $"Выбран движок {ActiveAntiDpiEngineName}. Он будет автоматически подбирать стратегию для отмеченных сервисов."
+        : IsAntiDpiServicesEnabled
+            ? $"Движок {ActiveAntiDpiEngineName} не скачан. Выберите установленный движок на странице «Движки»."
+            : "Чтобы включить эти сервисы, скачайте хотя бы один Anti-DPI движок.";
     public string GoodbyeDpiRuntimeStatus => !IsGoodbyeDpiInstalled
         ? "GoodbyeDPI ещё не скачан."
         : IsGoodbyeDpiRuntimeEnabled
             ? "GoodbyeDPI запущен, а выбранная стратегия прошла TCP/TLS-проверку."
             : "GoodbyeDPI скачан, но фоновый режим сейчас выключен.";
+    public string Zapret2RuntimeStatus => !IsZapret2Installed
+        ? "zapret2 ещё не скачан."
+        : IsZapret2RuntimeEnabled
+            ? "zapret2 запущен, а выбранная стратегия прошла TCP/TLS-проверку."
+            : $"zapret2 v{Zapret2InstallService.EngineVersion} скачан, но сейчас выключен.";
+    public string AntiDpiRuntimeStatus => IsZapret2Selected
+        ? Zapret2RuntimeStatus
+        : GoodbyeDpiRuntimeStatus;
     public bool HasSelectedBypassTarget =>
         Services.Any(item => item.IsSelected)
-        || (IsGoodbyeDpiInstalled && AntiDpiServices.Any(item => item.IsSelected));
+        || (IsSelectedAntiDpiEngineInstalled && AntiDpiServices.Any(item => item.IsSelected));
     public string AntiDpiSelectionSummary =>
-        !IsGoodbyeDpiInstalled
+        !IsSelectedAntiDpiEngineInstalled
             ? "Anti-DPI блок пока неактивен."
             :
         AntiDpiServices.Count(item => item.IsSelected) == 0
             ? "GoodbyeDPI не будет запускаться автоматически для этих сервисов."
-            : $"Anti-DPI сервисов выбрано: {AntiDpiServices.Count(item => item.IsSelected)}.";
+            : $"Anti-DPI сервисов выбрано: {AntiDpiServices.Count(item => item.IsSelected)} · движок {ActiveAntiDpiEngineName}.";
     public string EngineOperationMessage
     {
         get => _engineOperationMessage;
@@ -516,7 +616,8 @@ public sealed class MainViewModel : ObservableObject
             if (HostsState == HostsState.Corrupted)
                 return UiState.Corrupted;
 
-            if (IsGoodbyeDpiRuntimeEnabled && HostsState == HostsState.Inactive)
+            if ((IsGoodbyeDpiRuntimeEnabled || IsZapret2RuntimeEnabled)
+                && HostsState == HostsState.Inactive)
                 return UiState.ActiveUnverified;
 
             if (HostsState == HostsState.Inactive)
@@ -566,6 +667,8 @@ public sealed class MainViewModel : ObservableObject
         {
             var result = await _goodbyeDpiInstallService.InstallAsync();
             IsGoodbyeDpiInstalled = result.IsInstalled;
+            if (result.IsInstalled)
+                SelectAntiDpiEngine(GoodbyeDpiEngineId);
             EngineOperationMessage = result.Message;
             OperationMessage = result.IsInstalled
                 ? "GoodbyeDPI скачан. Anti-DPI блок в сервисах активирован."
@@ -593,10 +696,14 @@ public sealed class MainViewModel : ObservableObject
             await _goodbyeDpiRuntimeService.DisableAsync();
             IsGoodbyeDpiRuntimeEnabled = false;
 
-            foreach (var service in AntiDpiServices)
-                service.IsSelected = false;
             _lastAntiDpiOptimizationResult = null;
             _antiDpiStrategySelectionStore.Clear();
+
+            if (IsZapret2Installed)
+                SelectAntiDpiEngine(Zapret2EngineId);
+            else
+                foreach (var service in AntiDpiServices)
+                    service.IsSelected = false;
 
             if (wasPowerOn)
             {
@@ -609,7 +716,10 @@ public sealed class MainViewModel : ObservableObject
 
             _settingsService.Save(
                 Services.Where(item => item.IsSelected).Select(item => item.Module.Id),
-                []);
+                IsZapret2Installed
+                    ? AntiDpiServices.Where(item => item.IsSelected).Select(item => item.Id)
+                    : [],
+                selectedAntiDpiEngineId: SelectedAntiDpiEngineId);
             var result = _goodbyeDpiInstallService.Uninstall();
             IsGoodbyeDpiInstalled = _goodbyeDpiInstallService.IsInstalled();
             EngineOperationMessage = result.Message;
@@ -631,21 +741,117 @@ public sealed class MainViewModel : ObservableObject
         }
     }
 
+    private async Task DownloadZapret2Async()
+    {
+        IsBusy = true;
+        EngineOperationMessage = $"Скачиваем официальный zapret2 v{Zapret2InstallService.EngineVersion}...";
+        ClearEngineActivityLog();
+        try
+        {
+            var progress = new Progress<string>(message =>
+            {
+                EngineOperationMessage = message;
+                AddEngineActivity(message);
+            });
+            var result = await _zapret2InstallService.InstallAsync(progress);
+            IsZapret2Installed = result.IsInstalled;
+            if (result.IsInstalled)
+                SelectAntiDpiEngine(Zapret2EngineId);
+            EngineOperationMessage = result.Message;
+            OperationMessage = result.Message;
+            AddEngineActivity(result.Message);
+        }
+        catch (Exception exception)
+        {
+            IsZapret2Installed = _zapret2InstallService.IsInstalled();
+            EngineOperationMessage = ToUserMessage("Не удалось скачать zapret2", exception);
+            OperationMessage = EngineOperationMessage;
+            AddEngineActivity(EngineOperationMessage);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    private async Task RemoveZapret2Async()
+    {
+        IsBusy = true;
+        EngineOperationMessage = "Останавливаем zapret2 и удаляем его файлы...";
+        ClearEngineActivityLog();
+        try
+        {
+            await _zapret2RuntimeService.DisableAsync();
+            IsZapret2RuntimeEnabled = false;
+            _zapret2StrategySelectionStore.Clear();
+            _lastAntiDpiOptimizationResult = null;
+
+            var result = _zapret2InstallService.Uninstall();
+            IsZapret2Installed = _zapret2InstallService.IsInstalled();
+            if (IsGoodbyeDpiInstalled)
+                SelectAntiDpiEngine(GoodbyeDpiEngineId);
+            else
+                foreach (var service in AntiDpiServices)
+                    service.IsSelected = false;
+
+            _settingsService.Save(
+                Services.Where(item => item.IsSelected).Select(item => item.Module.Id),
+                IsGoodbyeDpiInstalled
+                    ? AntiDpiServices.Where(item => item.IsSelected).Select(item => item.Id)
+                    : [],
+                selectedAntiDpiEngineId: SelectedAntiDpiEngineId);
+            EngineOperationMessage = result.Message;
+            OperationMessage = result.Message;
+            AddEngineActivity(result.Message);
+            RefreshState();
+        }
+        catch (Exception exception)
+        {
+            IsZapret2Installed = _zapret2InstallService.IsInstalled();
+            EngineOperationMessage = ToUserMessage("Не удалось удалить zapret2", exception);
+            OperationMessage = EngineOperationMessage;
+            AddEngineActivity(EngineOperationMessage);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    private void SelectAntiDpiEngine(string engineId)
+    {
+        var normalized = string.Equals(engineId, Zapret2EngineId, StringComparison.OrdinalIgnoreCase)
+            ? Zapret2EngineId
+            : GoodbyeDpiEngineId;
+        if (normalized == Zapret2EngineId && !IsZapret2Installed
+            || normalized == GoodbyeDpiEngineId && !IsGoodbyeDpiInstalled)
+        {
+            return;
+        }
+
+        SelectedAntiDpiEngineId = normalized;
+        _settingsService.Save(
+            Services.Where(item => item.IsSelected).Select(item => item.Module.Id),
+            AntiDpiServices.Where(item => item.IsSelected).Select(item => item.Id),
+            selectedAntiDpiEngineId: SelectedAntiDpiEngineId);
+        OperationMessage = $"Выбран Anti-DPI движок {ActiveAntiDpiEngineName}. Примените настройки для запуска.";
+    }
+
     public async Task RestoreBackgroundStateAsync()
     {
         var selectedAntiDpi = AntiDpiServices
             .Where(item => item.IsSelected)
             .ToArray();
 
-        if (IsGoodbyeDpiInstalled && selectedAntiDpi.Length > 0)
+        if (IsSelectedAntiDpiEngineInstalled && selectedAntiDpi.Length > 0)
         {
-            await SyncGoodbyeDpiAsync(selectedAntiDpi);
+            await SyncAntiDpiAsync(selectedAntiDpi);
             var regularModules = GetExpectedActiveModules(
                     Services.Where(item => item.IsSelected).ToArray())
                 .Where(module => module.Id != "anti-dpi-routing");
             ApplyManagedModules(
                 regularModules,
-                _lastAntiDpiOptimizationResult?.Addresses);
+                IsZapret2Selected ? null : _lastAntiDpiOptimizationResult?.Addresses);
             DnsCacheService.Flush();
         }
     }
@@ -674,10 +880,11 @@ public sealed class MainViewModel : ObservableObject
 
             _settingsService.Save(
                 Services.Where(item => item.IsSelected).Select(item => item.Module.Id),
-                IsGoodbyeDpiInstalled
+                IsSelectedAntiDpiEngineInstalled
                     ? AntiDpiServices.Where(item => item.IsSelected).Select(item => item.Id)
                     : [],
-                enabled);
+                enabled,
+                selectedAntiDpiEngineId: SelectedAntiDpiEngineId);
         }
         catch (Exception exception)
         {
@@ -717,7 +924,7 @@ public sealed class MainViewModel : ObservableObject
             {
                 ClearCleanupReport();
                 _hostsService.Disable();
-                await DisableGoodbyeDpiAsync();
+                await DisableAntiDpiAsync();
                 DnsCacheService.Flush();
                 var cleanup = _hostsService.VerifyCleanup(Services.Select(item => item.Module));
                 SetCleanupReport("Отключение выполнено", cleanup, dnsFlushed: true);
@@ -757,7 +964,7 @@ public sealed class MainViewModel : ObservableObject
         var selectedAntiDpi = AntiDpiServices.Where(item => item.IsSelected).ToArray();
         IsBusy = true;
         OperationMessage = selected.Length == 0 && selectedAntiDpi.Length > 0
-            ? "Подбираем Anti-DPI стратегию и доступные edge-IP..."
+            ? $"Подбираем стратегию {ActiveAntiDpiEngineName}..."
             : string.Empty;
         ClearCleanupReport();
         ClearEngineActivityLog();
@@ -797,13 +1004,14 @@ public sealed class MainViewModel : ObservableObject
 
             _settingsService.Save(
                 selected.Select(item => item.Module.Id),
-                IsGoodbyeDpiInstalled
+                IsSelectedAntiDpiEngineInstalled
                     ? selectedAntiDpi.Select(item => item.Id)
-                    : []);
-            var engineMessage = await SyncGoodbyeDpiAsync(selectedAntiDpi);
+                    : [],
+                selectedAntiDpiEngineId: SelectedAntiDpiEngineId);
+            var engineMessage = await SyncAntiDpiAsync(selectedAntiDpi);
             ApplyManagedModules(
                 effectiveModules,
-                _lastAntiDpiOptimizationResult?.Addresses);
+                IsZapret2Selected ? null : _lastAntiDpiOptimizationResult?.Addresses);
             DnsCacheService.Flush();
 
             OperationMessage = selected.Length == 0
@@ -906,41 +1114,54 @@ public sealed class MainViewModel : ObservableObject
         await ApplySelectedServicesAsync();
     }
 
-    private async Task<string> SyncGoodbyeDpiAsync(
+    private async Task<string> SyncAntiDpiAsync(
         IReadOnlyCollection<AntiDpiServiceItemViewModel> selectedAntiDpi)
     {
-        if (!IsGoodbyeDpiInstalled)
+        if (!IsSelectedAntiDpiEngineInstalled)
         {
             _lastAntiDpiOptimizationResult = null;
             IsGoodbyeDpiRuntimeEnabled = false;
+            IsZapret2RuntimeEnabled = false;
             if (selectedAntiDpi.Count > 0)
-                AddEngineActivity("GoodbyeDPI не установлен — проверка движка пропущена.");
+                AddEngineActivity($"{ActiveAntiDpiEngineName} не установлен — проверка движка пропущена.");
             return selectedAntiDpi.Count == 0
                 ? string.Empty
-                : "GoodbyeDPI ещё не скачан.";
+                : $"{ActiveAntiDpiEngineName} ещё не скачан.";
         }
 
         if (selectedAntiDpi.Count == 0)
         {
             _lastAntiDpiOptimizationResult = null;
-            var stopped = await _goodbyeDpiRuntimeService.DisableAsync();
-            IsGoodbyeDpiRuntimeEnabled = false;
-            EngineOperationMessage = stopped.Message;
-            AddEngineActivity(stopped.Message);
-            return "Anti-DPI сервисы не выбраны, GoodbyeDPI выключен.";
+            await DisableAntiDpiAsync();
+            return $"Anti-DPI сервисы не выбраны, {ActiveAntiDpiEngineName} выключен.";
         }
 
-        AddEngineActivity("Начинаем подбор стратегии и edge-IP.");
+        AddEngineActivity($"Начинаем подбор стратегии {ActiveAntiDpiEngineName}.");
         var progress = new Progress<string>(message =>
         {
             EngineOperationMessage = message;
             AddEngineActivity(message);
         });
-        var optimized = await _goodbyeDpiStrategyOptimizer.EnableBestAsync(
-            selectedAntiDpi.Select(item => item.Id),
-            progress);
+        AntiDpiOptimizationResult optimized;
+        if (IsZapret2Selected)
+        {
+            await _goodbyeDpiRuntimeService.DisableAsync();
+            IsGoodbyeDpiRuntimeEnabled = false;
+            optimized = await _zapret2StrategyOptimizer.EnableBestAsync(
+                selectedAntiDpi.Select(item => item.Id),
+                progress);
+            IsZapret2RuntimeEnabled = optimized.IsSuccessful;
+        }
+        else
+        {
+            await _zapret2RuntimeService.DisableAsync();
+            IsZapret2RuntimeEnabled = false;
+            optimized = await _goodbyeDpiStrategyOptimizer.EnableBestAsync(
+                selectedAntiDpi.Select(item => item.Id),
+                progress);
+            IsGoodbyeDpiRuntimeEnabled = optimized.IsSuccessful;
+        }
         _lastAntiDpiOptimizationResult = optimized;
-        IsGoodbyeDpiRuntimeEnabled = optimized.IsSuccessful;
         EngineOperationMessage = optimized.Message;
         AddEngineActivity(optimized.Message);
         return optimized.Message;
@@ -974,11 +1195,13 @@ public sealed class MainViewModel : ObservableObject
             GoodbyeDpiRuntimeService.BuildHostsEntries(addresses),
             "generated");
 
-    private async Task DisableGoodbyeDpiAsync()
+    private async Task DisableAntiDpiAsync()
     {
-        var stopped = await _goodbyeDpiRuntimeService.DisableAsync();
+        var goodbyeStopped = await _goodbyeDpiRuntimeService.DisableAsync();
+        var zapretStopped = await _zapret2RuntimeService.DisableAsync();
         IsGoodbyeDpiRuntimeEnabled = false;
-        EngineOperationMessage = stopped.Message;
+        IsZapret2RuntimeEnabled = false;
+        EngineOperationMessage = $"{goodbyeStopped.Message} {zapretStopped.Message}";
     }
 
     private async Task<IReadOnlyList<ServiceDiagnosticResult>> DiagnoseWithProgressAsync(
@@ -1068,11 +1291,12 @@ public sealed class MainViewModel : ObservableObject
     {
         _settingsService.Save(
             Services.Where(item => item.IsSelected).Select(item => item.Module.Id),
-            IsGoodbyeDpiInstalled
+            IsSelectedAntiDpiEngineInstalled
                 ? AntiDpiServices.Where(item => item.IsSelected).Select(item => item.Id)
                 : [],
             multiCheckEnabled: MultiCheckEnabled,
-            diagnosticAttempts: DiagnosticAttempts);
+            diagnosticAttempts: DiagnosticAttempts,
+            selectedAntiDpiEngineId: SelectedAntiDpiEngineId);
     }
 
     private void UpdateServiceActivity(NetworkDiagnosticProgress progress)
@@ -1122,7 +1346,8 @@ public sealed class MainViewModel : ObservableObject
     }
 
     private static IReadOnlyList<AntiDpiServiceItemViewModel> CreateAntiDpiServices(
-        IReadOnlySet<string>? selectedIds)
+        IReadOnlySet<string>? selectedIds,
+        string engineName)
     {
         bool IsSelectedByDefault(string id) =>
             selectedIds is null || selectedIds.Contains(id);
@@ -1132,41 +1357,60 @@ public sealed class MainViewModel : ObservableObject
             new AntiDpiServiceItemViewModel(
                 "youtube",
                 "YouTube",
-                "GoodbyeDPI",
-                "Будущий запуск Anti-DPI режима для видео и связанных доменов.",
+                engineName,
+                "Anti-DPI режим для видео, сайта и связанных доменов.",
                 IsSelectedByDefault("youtube")),
             new AntiDpiServiceItemViewModel(
                 "discord",
                 "Discord",
-                "GoodbyeDPI",
-                "Будущий запуск Anti-DPI режима для голосовой связи, клиента и сайта.",
+                engineName,
+                "Anti-DPI режим для сайта и клиента; UDP-проверки будут расширены отдельно.",
                 IsSelectedByDefault("discord"))
         ];
     }
 
-    private IReadOnlyList<EngineCardViewModel> CreateEngineCards(bool isGoodbyeDpiInstalled) =>
+    private IReadOnlyList<EngineCardViewModel> CreateEngineCards() =>
     [
         new EngineCardViewModel(
+            GoodbyeDpiEngineId,
             "GoodbyeDPI",
             BypassEngineKind.AntiDpi,
-            isGoodbyeDpiInstalled ? "Скачан" : "Нужно скачать",
-            isGoodbyeDpiInstalled,
+            IsGoodbyeDpiInstalled
+                ? IsZapret2Selected ? "Скачан" : "Выбран"
+                : "Нужно скачать",
+            IsGoodbyeDpiInstalled,
             ["YouTube", "Discord", "сервисы с DPI-блокировкой"],
-            "Windows-движок для обхода DPI. NetBypass будет запускать его как внешний процесс и проверять результат после старта.",
-            isGoodbyeDpiInstalled
-                ? "Следующий шаг: запуск базового профиля и безопасная остановка."
+            "Компактный Windows-движок. NetBypass подбирает профиль и проверяет результат после запуска.",
+            IsGoodbyeDpiInstalled
+                ? "Готов к автоматическому подбору стратегий."
                 : "Сначала скачиваем официальный архив GoodbyeDPI и сохраняем его в папку пользователя.",
-            showDownloadButton: !isGoodbyeDpiInstalled,
-            showRemoveButton: isGoodbyeDpiInstalled),
+            showDownloadButton: !IsGoodbyeDpiInstalled,
+            showRemoveButton: IsGoodbyeDpiInstalled,
+            isSelected: !IsZapret2Selected,
+            downloadCommand: DownloadGoodbyeDpiCommand,
+            removeCommand: RemoveGoodbyeDpiCommand,
+            selectCommand: UseGoodbyeDpiCommand),
         new EngineCardViewModel(
-            "zapret / zapret2",
+            Zapret2EngineId,
+            "zapret2",
             BypassEngineKind.AntiDpi,
-            "В следующих обновлениях",
-            false,
+            IsZapret2Installed
+                ? IsZapret2Selected ? "Выбран" : "Скачан"
+                : "Нужно скачать",
+            IsZapret2Installed,
             ["YouTube", "Discord", "сложные DPI-сценарии"],
-            "Более гибкий Anti-DPI-инструмент с большим количеством стратегий. Подключим после общего lifecycle и журнала ресурсов.",
-            "Пока неактивно: сначала докажем безопасный запуск и cleanup на GoodbyeDPI."),
+            $"Гибкий пакетный движок v{Zapret2InstallService.EngineVersion} с Lua-стратегиями и WinDivert. Архив и критические файлы проверяются по SHA-256.",
+            IsZapret2Installed
+                ? "Готов к последовательному подбору из 10 TCP/TLS стратегий; рабочий профиль сохраняется."
+                : "Скачивается официальный фиксированный релиз bol-van/zapret2 для Windows x64.",
+            showDownloadButton: !IsZapret2Installed,
+            showRemoveButton: IsZapret2Installed,
+            isSelected: IsZapret2Selected,
+            downloadCommand: DownloadZapret2Command,
+            removeCommand: RemoveZapret2Command,
+            selectCommand: UseZapret2Command),
         new EngineCardViewModel(
+            "byedpi",
             "ByeDPI",
             BypassEngineKind.AntiDpi,
             "В следующих обновлениях",
@@ -1179,7 +1423,7 @@ public sealed class MainViewModel : ObservableObject
     private void RebuildEngineCards()
     {
         Engines.Clear();
-        foreach (var engine in CreateEngineCards(IsGoodbyeDpiInstalled))
+        foreach (var engine in CreateEngineCards())
             Engines.Add(engine);
     }
 
@@ -1249,6 +1493,9 @@ public sealed class MainViewModel : ObservableObject
         IEnumerable<ServiceModule> regularModules)
     {
         var modules = regularModules.ToList();
+        if (IsZapret2Selected)
+            return modules;
+
         var selection = _antiDpiStrategySelectionStore.Load();
         var selectedAntiDpiIds = AntiDpiServices
             .Where(item => item.IsSelected)
@@ -1331,6 +1578,23 @@ public sealed class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(HasSelectedBypassTarget));
         OnPropertyChanged(nameof(AntiDpiSelectionSummary));
         OnPropertyChanged(nameof(AntiDpiInstallStatus));
+    }
+
+    private void RaiseAntiDpiEngineProperties()
+    {
+        OnPropertyChanged(nameof(IsPowerOn));
+        OnPropertyChanged(nameof(PowerButtonLabel));
+        OnPropertyChanged(nameof(IsAntiDpiServicesEnabled));
+        OnPropertyChanged(nameof(IsAntiDpiEngineMissing));
+        OnPropertyChanged(nameof(IsZapret2Selected));
+        OnPropertyChanged(nameof(ActiveAntiDpiEngineName));
+        OnPropertyChanged(nameof(IsSelectedAntiDpiEngineInstalled));
+        OnPropertyChanged(nameof(AntiDpiInstallStatus));
+        OnPropertyChanged(nameof(GoodbyeDpiRuntimeStatus));
+        OnPropertyChanged(nameof(Zapret2RuntimeStatus));
+        OnPropertyChanged(nameof(AntiDpiRuntimeStatus));
+        OnPropertyChanged(nameof(AntiDpiSelectionSummary));
+        OnPropertyChanged(nameof(HasSelectedBypassTarget));
     }
 
     private void RunSafely(Action action)

@@ -12,7 +12,7 @@
 Из корня проекта:
 
 ```powershell
-.\scripts\build-release.ps1 -Version 1.0.0
+.\scripts\build-release.ps1 -Version 1.2.0
 ```
 
 Скрипт:
@@ -25,13 +25,13 @@
 Готовые файлы появляются в `artifacts\release`:
 
 ```text
-NetBypass-v1.0.0-win-x64-portable.zip
-NetBypass-Setup-v1.0.0-win-x64.exe
+NetBypass-v1.2.0-win-x64-portable.zip
+NetBypass-Setup-v1.2.0-win-x64.exe
 SHA256SUMS.txt
 ```
 
 Portable-архив нужно распаковать целиком: рядом с `NetBypass.exe` находятся
-нативные WPF-библиотеки, каталог `Profiles` с JSON-профилями, каталог
+нативные Avalonia-библиотеки, каталог `Profiles` с JSON-профилями, каталог
 `RelayPools` с резервными кандидатами и legacy-каталог `Modules`.
 
 ## Сборка через интерфейс Inno Setup
@@ -54,8 +54,8 @@ git push origin main
 Создайте и отправьте тег:
 
 ```powershell
-git tag -a v1.0.0 -m "NetBypass v1.0.0"
-git push origin v1.0.0
+git tag -a v1.2.0 -m "NetBypass v1.2.0"
+git push origin v1.2.0
 ```
 
 На странице GitHub откройте **Releases → Draft a new release**, выберите тег и

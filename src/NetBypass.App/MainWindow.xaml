@@ -46,7 +46,9 @@
       <Setter Property="Foreground" Value="#F1F3FA" />
     </Style>
     <Style Selector="Button.nav">
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="MinHeight" Value="50" />
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="BorderBrush" Value="Transparent" />
       <Setter Property="Foreground" Value="#858DA1" />
@@ -131,7 +133,7 @@
             </StackPanel>
           </StackPanel>
 
-          <StackPanel Grid.Row="1" Margin="0,34,0,0">
+          <StackPanel Grid.Row="1" Margin="0,34,0,0" HorizontalAlignment="Stretch">
             <TextBlock Text="РАЗДЕЛЫ" Classes="eyebrow" Margin="12,0,0,8" Foreground="#596174" />
             <Button Classes="nav" Classes.active="{Binding IsHomePage}" Command="{Binding ShowHomeCommand}">
               <Grid ColumnDefinitions="30,*"><Path Classes="navIcon" Width="18" Height="18" Stretch="Uniform" Data="M3,11 L12,3 L21,11 M5,10 V21 H10 V15 H14 V21 H19 V10" /><TextBlock Grid.Column="1" Text="Главная" /></Grid>
@@ -317,9 +319,39 @@
                   <Button IsVisible="{Binding IsAntiDpiEngineMissing}" Classes="primary" Content="Выбрать и скачать движок" Command="{Binding ShowEnginesCommand}" HorizontalAlignment="Left" />
                 </StackPanel>
               </Border>
-              <ItemsControl ItemsSource="{Binding Services}">
-                <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate><DataTemplate><Border Classes="card serviceCard" Width="260" MinHeight="92" Margin="0,0,12,12" Padding="16"><CheckBox IsChecked="{Binding IsSelected}"><Grid Margin="7,0,0,0" ColumnDefinitions="*,Auto"><StackPanel Spacing="5"><TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="14" /><TextBlock Text="{Binding Category}" FontSize="10" Foreground="#7F879B" /></StackPanel><Border Grid.Column="1" Padding="8,4" CornerRadius="9" Background="#202637" VerticalAlignment="Top"><TextBlock Text="{Binding EntryCount, StringFormat={}{0} дом.}" FontSize="9" Foreground="#ADB4C4" /></Border></Grid></CheckBox></Border></DataTemplate></ItemsControl.ItemTemplate>
+              <ItemsControl ItemsSource="{Binding ServiceGroups}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <StackPanel Spacing="10" Margin="0,2,0,12">
+                      <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="10">
+                        <TextBlock Text="{Binding Name}" Classes="sectionTitle" />
+                        <Border Grid.Column="1" Padding="9,4" CornerRadius="10" Background="#1B2130" VerticalAlignment="Center">
+                          <TextBlock Text="{Binding CountText}" FontSize="9" Foreground="#929AAF" />
+                        </Border>
+                        <Border Grid.Column="2" Height="1" Margin="10,0,0,0" Background="{StaticResource LineBrush}" VerticalAlignment="Center" />
+                      </Grid>
+                      <ItemsControl ItemsSource="{Binding Services}">
+                        <ItemsControl.ItemsPanel>
+                          <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate>
+                            <Border Classes="card serviceCard" Width="260" MinHeight="78" Margin="0,0,12,12" Padding="16">
+                              <CheckBox IsChecked="{Binding IsSelected}">
+                                <Grid Margin="7,0,0,0" ColumnDefinitions="*,Auto">
+                                  <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center" TextWrapping="Wrap" />
+                                  <Border Grid.Column="1" Padding="8,4" CornerRadius="9" Background="#202637" VerticalAlignment="Top">
+                                    <TextBlock Text="{Binding EntryCount, StringFormat={}{0} дом.}" FontSize="9" Foreground="#ADB4C4" />
+                                  </Border>
+                                </Grid>
+                              </CheckBox>
+                            </Border>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </StackPanel>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
               </ItemsControl>
               <Border IsVisible="{Binding HasOperationMessage}" Classes="card" Padding="15"><TextBlock Text="{Binding OperationMessage}" Foreground="#B7BECE" TextWrapping="Wrap" /></Border>
             </StackPanel>

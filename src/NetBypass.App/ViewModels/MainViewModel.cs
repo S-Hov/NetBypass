@@ -56,7 +56,7 @@ public sealed class MainViewModel : ObservableObject
     private bool _isGoodbyeDpiRuntimeEnabled;
     private bool _isZapret2Installed;
     private bool _isZapret2RuntimeEnabled;
-    private string _selectedAntiDpiEngineId = GoodbyeDpiEngineId;
+    private string _selectedAntiDpiEngineId = Zapret2EngineId;
     private string _engineOperationMessage = string.Empty;
     private bool _startWithWindows;
     private bool _multiCheckEnabled;
@@ -97,10 +97,10 @@ public sealed class MainViewModel : ObservableObject
         _isZapret2RuntimeEnabled = _zapret2RuntimeService.IsEnabled();
         _selectedAntiDpiEngineId = string.Equals(
             settings?.SelectedAntiDpiEngineId,
-            Zapret2EngineId,
+            GoodbyeDpiEngineId,
             StringComparison.OrdinalIgnoreCase)
-            ? Zapret2EngineId
-            : GoodbyeDpiEngineId;
+            ? GoodbyeDpiEngineId
+            : Zapret2EngineId;
         _startWithWindows = settings?.StartWithWindows ?? false;
         _multiCheckEnabled = settings?.MultiCheckEnabled ?? true;
         _diagnosticAttempts = Math.Clamp(settings?.DiagnosticAttempts ?? 3, 2, 10);
@@ -110,6 +110,8 @@ public sealed class MainViewModel : ObservableObject
                 profile,
                 settings?.SelectedModuleIds?.Contains(profile.Id)
                     ?? !DisabledByDefault.Contains(profile.Id))));
+        ServiceGroups = new ObservableCollection<ServiceGroupViewModel>(
+            CreateServiceGroups(Services));
         AntiDpiServices = new ObservableCollection<AntiDpiServiceItemViewModel>(
             CreateAntiDpiServices(
                 settings?.SelectedAntiDpiServiceIds,
@@ -169,6 +171,7 @@ public sealed class MainViewModel : ObservableObject
     }
 
     public ObservableCollection<ServiceItemViewModel> Services { get; }
+    public ObservableCollection<ServiceGroupViewModel> ServiceGroups { get; }
     public ObservableCollection<AntiDpiServiceItemViewModel> AntiDpiServices { get; }
     public ObservableCollection<DiagnosticItemViewModel> Diagnostics { get; }
     public ObservableCollection<OperationTraceItemViewModel> ServiceActivity { get; }
@@ -1369,27 +1372,45 @@ public sealed class MainViewModel : ObservableObject
         ];
     }
 
+    private static IReadOnlyList<ServiceGroupViewModel> CreateServiceGroups(
+        IEnumerable<ServiceItemViewModel> services)
+    {
+        string[] preferredOrder =
+        [
+            "AI",
+            "Музыка",
+            "Видео и медиа",
+            "Игры",
+            "Социальные сети",
+            "Продуктивность",
+            "Разработка",
+            "Программы",
+            "Платформы",
+            "Сайты",
+            "Сеть",
+            "Безопасность",
+            "Финансы",
+            "Производители",
+            "Сервисы"
+        ];
+        var priorities = preferredOrder
+            .Select((name, index) => (name, index))
+            .ToDictionary(pair => pair.name, pair => pair.index, StringComparer.OrdinalIgnoreCase);
+
+        return services
+            .GroupBy(service => service.Category, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(group => priorities.TryGetValue(group.Key, out var priority)
+                ? priority
+                : int.MaxValue)
+            .ThenBy(group => group.Key, StringComparer.CurrentCultureIgnoreCase)
+            .Select(group => new ServiceGroupViewModel(
+                group.Key,
+                group.OrderBy(service => service.Name, StringComparer.CurrentCultureIgnoreCase).ToArray()))
+            .ToArray();
+    }
+
     private IReadOnlyList<EngineCardViewModel> CreateEngineCards() =>
     [
-        new EngineCardViewModel(
-            GoodbyeDpiEngineId,
-            "GoodbyeDPI",
-            BypassEngineKind.AntiDpi,
-            IsGoodbyeDpiInstalled
-                ? IsZapret2Selected ? "Скачан" : "Выбран"
-                : "Нужно скачать",
-            IsGoodbyeDpiInstalled,
-            ["YouTube", "Discord", "сервисы с DPI-блокировкой"],
-            "Компактный Windows-движок. NetBypass подбирает профиль и проверяет результат после запуска.",
-            IsGoodbyeDpiInstalled
-                ? "Готов к автоматическому подбору стратегий."
-                : "Сначала скачиваем официальный архив GoodbyeDPI и сохраняем его в папку пользователя.",
-            showDownloadButton: !IsGoodbyeDpiInstalled,
-            showRemoveButton: IsGoodbyeDpiInstalled,
-            isSelected: !IsZapret2Selected,
-            downloadCommand: DownloadGoodbyeDpiCommand,
-            removeCommand: RemoveGoodbyeDpiCommand,
-            selectCommand: UseGoodbyeDpiCommand),
         new EngineCardViewModel(
             Zapret2EngineId,
             "zapret2",
@@ -1409,6 +1430,25 @@ public sealed class MainViewModel : ObservableObject
             downloadCommand: DownloadZapret2Command,
             removeCommand: RemoveZapret2Command,
             selectCommand: UseZapret2Command),
+        new EngineCardViewModel(
+            GoodbyeDpiEngineId,
+            "GoodbyeDPI",
+            BypassEngineKind.AntiDpi,
+            IsGoodbyeDpiInstalled
+                ? IsZapret2Selected ? "Скачан" : "Выбран"
+                : "Нужно скачать",
+            IsGoodbyeDpiInstalled,
+            ["YouTube", "Discord", "сервисы с DPI-блокировкой"],
+            "Компактный Windows-движок. NetBypass подбирает профиль и проверяет результат после запуска.",
+            IsGoodbyeDpiInstalled
+                ? "Готов к автоматическому подбору стратегий."
+                : "Сначала скачиваем официальный архив GoodbyeDPI и сохраняем его в папку пользователя.",
+            showDownloadButton: !IsGoodbyeDpiInstalled,
+            showRemoveButton: IsGoodbyeDpiInstalled,
+            isSelected: !IsZapret2Selected,
+            downloadCommand: DownloadGoodbyeDpiCommand,
+            removeCommand: RemoveGoodbyeDpiCommand,
+            selectCommand: UseGoodbyeDpiCommand),
         new EngineCardViewModel(
             "byedpi",
             "ByeDPI",

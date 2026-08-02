@@ -8,7 +8,7 @@ public sealed record AppSettings(
     bool StartWithWindows = false,
     bool MultiCheckEnabled = true,
     int DiagnosticAttempts = 3,
-    string SelectedAntiDpiEngineId = "goodbyedpi");
+    string SelectedAntiDpiEngineId = "zapret2");
 
 public sealed class SettingsService
 {
@@ -66,7 +66,7 @@ public sealed class SettingsService
     }
 
     private static string NormalizeEngineId(string? engineId) =>
-        string.Equals(engineId, "zapret2", StringComparison.OrdinalIgnoreCase)
-            ? "zapret2"
-            : "goodbyedpi";
+        string.Equals(engineId, "goodbyedpi", StringComparison.OrdinalIgnoreCase)
+            ? "goodbyedpi"
+            : "zapret2";
 }
